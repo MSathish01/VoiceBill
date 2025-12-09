@@ -1,0 +1,73 @@
+import { Language, Translation } from './types';
+
+export const TRANSLATIONS: Record<Language, Translation> = {
+  en: {
+    title: "Daily Home Billing",
+    slNo: "Sl. No",
+    item: "Item Name",
+    quantity: "Qty/Unit",
+    rate: "Rate (₹)",
+    total: "Total",
+    grandTotal: "Grand Total",
+    micHint: "Tap Mic & Say: 'Tomato 2 kg 50 rupees'",
+    listening: "Listening...",
+    addItem: "Add Manually",
+    downloadPdf: "Download PDF",
+    userDetails: "Customer Details",
+    namePlaceholder: "Customer Name",
+    addressPlaceholder: "Address",
+    mobilePlaceholder: "Mobile Number",
+    emailPlaceholder: "Email (Optional)",
+    delete: "Delete",
+    clearAll: "Clear List"
+  },
+  ta: {
+    title: "தினசரி வீட்டு ரசீது",
+    slNo: "வ.எண்",
+    item: "பொருள்",
+    quantity: "அளவு",
+    rate: "விலை (₹)",
+    total: "மொத்தம்",
+    grandTotal: "மொத்த தொகை",
+    micHint: "பேசவும்: 'தக்காளி 2 கிலோ 50 ரூபாய்'",
+    listening: "கேட்கிறது...",
+    addItem: "சேர்க்கவும்",
+    downloadPdf: "PDF பதிவிறக்கம்",
+    userDetails: "வாடிக்கையாளர் விவரங்கள்",
+    namePlaceholder: "பெயர்",
+    addressPlaceholder: "முகவரி",
+    mobilePlaceholder: "கைபேசி எண்",
+    emailPlaceholder: "மின்னஞ்சல் (விருப்பத் தேர்வு)",
+    delete: "நீக்கு",
+    clearAll: "அழி"
+  }
+};
+
+// Regex Patterns for Parsing
+// Note: We include variations. The Parser will sort by length to match longest first.
+export const RATE_KEYWORDS = [
+  'rupees', 'rupee', 'rs', 'rupai', 'rooba', 'r', 'inr', '₹', // English/Symbols
+  'ரூபாய்', 'ரூ', 'விலை', 'ரூபாய்க்கு' // Tamil
+];
+
+export const QUANTITY_KEYWORDS = [
+  // English
+  'kilogram', 'kilo', 'kgs', 'kg', 
+  'gram', 'gms', 'gm', 'g', 
+  'liters', 'liter', 'litre', 'ltr', 'l', 
+  'milli', 'ml', 
+  'packets', 'packet', 'pkt', 'pack', 'bundle', 'bunch',
+  'boxes', 'box', 'pieces', 'piece', 'pcs', 'nos', 'number', 'dozen',
+  
+  // Tamil Units
+  'கிலோ', 'கி.கி', 'கி', // Kg
+  'கிராம்', 'கி.கி', // Gram
+  'லிட்டர்', 'லி', // Liter
+  'மில்லி', // Milli
+  'பாக்கெட்', 'பாக்', // Packet
+  'கட்டு', // Bundle
+  'எண்ணிக்கை', 'பீஸ்', 'பிஸ்', // Pieces/Count
+  'டஜன்', // Dozen
+  'மூட்டை', // Sack/Bag
+  'பெட்டி' // Box
+];

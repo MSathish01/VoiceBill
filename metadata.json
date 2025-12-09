@@ -1,0 +1,7 @@
+{
+  "name": "VoiceBill - Daily Home Billing",
+  "description": "A voice-enabled billing application supporting English and Tamil, featuring automatic item parsing and PDF generation.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
