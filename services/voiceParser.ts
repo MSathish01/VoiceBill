@@ -3,20 +3,36 @@ import { ParsedVoiceData } from '../types';
 
 // Map for Tamil text numbers to digits
 const TAMIL_NUMBER_MAP: Record<string, string> = {
-  'ஒன்று': '1', 'ஒன்னு': '1', 'ஒரு': '1',
-  'இரண்டு': '2', 'ரெண்டு': '2',
+  // Basic numbers
+  'ஒன்று': '1', 'ஒன்னு': '1', 'ஒரு': '1', 'ஒண்ணு': '1',
+  'இரண்டு': '2', 'ரெண்டு': '2', 'இரெண்டு': '2',
   'மூன்று': '3', 'மூணு': '3',
-  'நான்கு': '4', 'நாலு': '4',
+  'நான்கு': '4', 'நாலு': '4', 'நாங்கு': '4',
   'ஐந்து': '5', 'அஞ்சு': '5',
   'ஆறு': '6',
   'ஏழு': '7',
   'எட்டு': '8',
-  'ஒன்பது': '9',
+  'ஒன்பது': '9', 'ஒம்பது': '9',
   'பத்து': '10',
-  'இருபது': '20',
+  // Teens
+  'பதினொன்று': '11', 'பதினோரு': '11',
+  'பன்னிரண்டு': '12', 'பன்னெண்டு': '12',
+  'பதிமூன்று': '13',
+  'பதினான்கு': '14',
+  'பதினைந்து': '15',
+  'பதினாறு': '16',
+  'பதினேழு': '17',
+  'பதினெட்டு': '18',
+  'பத்தொன்பது': '19',
+  // Tens
+  'இருபது': '20', 'இருவது': '20',
   'முப்பது': '30',
   'நாற்பது': '40',
   'ஐம்பது': '50',
+  'அறுபது': '60',
+  'எழுபது': '70',
+  'எண்பது': '80',
+  'தொண்ணூறு': '90',
   'நூறு': '100',
   // Fractions (Common in grocery)
   'அரை': '0.5',
@@ -24,33 +40,105 @@ const TAMIL_NUMBER_MAP: Record<string, string> = {
   'முக்கால்': '0.75'
 };
 
+// English spoken number variations that speech recognition might produce
+const ENGLISH_NUMBER_MAP: Record<string, string> = {
+  'one': '1', 'won': '1',
+  'two': '2', 'to': '2', 'too': '2',
+  'three': '3', 'tree': '3',
+  'four': '4', 'for': '4', 'fore': '4',
+  'five': '5',
+  'six': '6', 'sex': '6',
+  'seven': '7',
+  'eight': '8', 'ate': '8',
+  'nine': '9',
+  'ten': '10',
+  'eleven': '11',
+  'twelve': '12',
+  'thirteen': '13',
+  'fourteen': '14',
+  'fifteen': '15',
+  'sixteen': '16',
+  'seventeen': '17',
+  'eighteen': '18',
+  'nineteen': '19',
+  'twenty': '20',
+  'thirty': '30',
+  'forty': '40', 'fourty': '40',
+  'fifty': '50',
+  'sixty': '60',
+  'seventy': '70',
+  'eighty': '80',
+  'ninety': '90',
+  'hundred': '100',
+  'half': '0.5',
+  'quarter': '0.25'
+};
+
+// Common misheard rate patterns from speech recognition
+const RATE_CORRECTIONS: Record<string, string> = {
+  'rupee': 'rupees',
+  'rupe': 'rupees',
+  'rupay': 'rupees',
+  'rupaya': 'rupees',
+  'roopees': 'rupees',
+  'rupies': 'rupees',
+  'rupi': 'rupees',
+  'rs': 'rupees',
+  'are': 'rupees', // "50 are" misheard as "50 rs"
+  'ars': 'rupees',
+  'rupess': 'rupees'
+};
+
 /**
- * Normalizes Tamil text by converting spoken number words to digits.
- * E.g., "இரண்டு கிலோ" -> "2 கிலோ"
+ * Normalizes text by converting spoken number words to digits.
  */
-const normalizeTamilText = (text: string): string => {
-  let normalized = text;
+const normalizeNumbers = (text: string): string => {
+  let normalized = text.toLowerCase();
+  
+  // First pass: Tamil numbers
   Object.keys(TAMIL_NUMBER_MAP).forEach(key => {
-    // Regex matches the word with boundaries to avoid replacing parts of other words
-    // \b doesn't always work well with Tamil characters, so we use space or start/end anchors
-    const regex = new RegExp(`(^|\\s)${key}(\\s|$)`, 'g');
+    const regex = new RegExp(`(^|\\s)${key}(\\s|$)`, 'gi');
     normalized = normalized.replace(regex, `$1${TAMIL_NUMBER_MAP[key]}$2`);
   });
+  
+  // Second pass: English spoken numbers
+  Object.keys(ENGLISH_NUMBER_MAP).forEach(key => {
+    const regex = new RegExp(`(^|\\s)${key}(\\s|$)`, 'gi');
+    normalized = normalized.replace(regex, `$1${ENGLISH_NUMBER_MAP[key]}$2`);
+  });
+  
+  // Third pass: Rate keyword corrections
+  Object.keys(RATE_CORRECTIONS).forEach(key => {
+    const regex = new RegExp(`(\\d+)\\s*${key}\\b`, 'gi');
+    normalized = normalized.replace(regex, `$1 ${RATE_CORRECTIONS[key]}`);
+  });
+  
+  // Handle compound numbers: "twenty five" -> "25", "fifty two" -> "52"
+  normalized = normalized.replace(/(\d0)\s+(\d)(?!\d)/g, (_, tens, ones) => {
+    return String(parseInt(tens) + parseInt(ones));
+  });
+  
+  // Clean up multiple spaces
+  normalized = normalized.replace(/\s+/g, ' ').trim();
+  
   return normalized;
 };
 
 /**
  * Parses a single segment of text into Item Name, Quantity, and Rate.
+ * IMPORTANT: When user says "item X kg Y rupees", the Y is TOTAL price, not per-unit rate.
+ * We need to calculate: rate = total_price / quantity
  */
 const parseSegment = (segment: string): ParsedVoiceData => {
-  // 1. Normalize (handle Tamil numbers first)
-  let text = normalizeTamilText(segment.toLowerCase().trim());
+  // 1. Normalize (handle Tamil & English spoken numbers)
+  let text = normalizeNumbers(segment.toLowerCase().trim());
   
-  // Clean up commas
-  text = text.replace(/,/g, '');
+  // Clean up commas and extra spaces
+  text = text.replace(/,/g, '').replace(/\s+/g, ' ').trim();
 
   let rate: number | null = null;
   let quantity: string | null = null;
+  let quantityNumber: number = 1; // For calculating rate from total
   
   // Helper to build regex safely escaping characters
   const buildPattern = (keywords: string[]) => {
@@ -61,62 +149,68 @@ const parseSegment = (segment: string): ParsedVoiceData => {
     }).join('|');
   };
 
-  // 2. Extract Rate (Explicit with keywords)
-  const rateKeyPattern = buildPattern(RATE_KEYWORDS);
-  // Matches "50 rupees", "rs 50", "50rupees", "50ரூபாய்"
-  const ratePattern = new RegExp(
-    `(\\d+(\\.\\d+)?)\\s*(${rateKeyPattern})|(${rateKeyPattern})\\s*(\\d+(\\.\\d+)?)`, 
-    'i'
-  );
-  
-  const rateMatch = text.match(ratePattern);
-  if (rateMatch) {
-    const numberStr = rateMatch[1] || rateMatch[5];
-    if (numberStr) {
-      rate = parseFloat(numberStr);
-      text = text.replace(rateMatch[0], ' ').trim();
-    }
-  }
-
-  // 3. Extract Quantity
+  // 2. Extract Quantity FIRST (before rate) to know the multiplier
   const qtyKeyPattern = buildPattern(QUANTITY_KEYWORDS);
-  // Matches "2kg", "2 kg", "2.5liters", "2கிலோ"
-  // Note: We intentionally don't enforce space between digit and unit for Tamil support (e.g. 2கிலோ)
-  const qtyPattern = new RegExp(`(\\d+(\\.\\d+)?)\\s*(${qtyKeyPattern})s?`, 'i');
+  const qtyPattern = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(${qtyKeyPattern})s?`, 'i');
   
   const qtyMatch = text.match(qtyPattern);
   if (qtyMatch) {
-    quantity = qtyMatch[0]; // Keep the unit in the string
+    quantity = qtyMatch[0].trim();
+    quantityNumber = parseFloat(qtyMatch[1]) || 1;
     text = text.replace(qtyMatch[0], ' ').trim();
-  } else {
-    // Fallback: Number at start if not a rate
-    // Only if we haven't found a quantity yet
-    const startNumberMatch = text.match(/^(\d+(\.\d+)?)\s+/);
-    if (startNumberMatch && !rate) {
-        // Ambiguous: Is "2 Tomato" 2 quantity or 2 rate? 
-        // Usually Quantity comes before item or after. 
-        // Let's assume quantity if no unit found yet.
-        quantity = startNumberMatch[1];
-        text = text.replace(startNumberMatch[0], ' ').trim();
+  }
+
+  // 3. Extract Price (what user says is TOTAL price, not rate per unit)
+  const rateKeyPattern = buildPattern(RATE_KEYWORDS);
+  
+  // Multiple patterns to catch different speech patterns:
+  const ratePatterns = [
+    new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(${rateKeyPattern})`, 'i'),
+    new RegExp(`(${rateKeyPattern})\\s*(\\d+(?:\\.\\d+)?)`, 'i'),
+  ];
+  
+  let totalPrice: number | null = null;
+  
+  for (const pattern of ratePatterns) {
+    const rateMatch = text.match(pattern);
+    if (rateMatch) {
+      // Find the number in the match
+      const numberStr = rateMatch[1].match(/^\d/) ? rateMatch[1] : rateMatch[2];
+      if (numberStr && !isNaN(parseFloat(numberStr))) {
+        totalPrice = parseFloat(numberStr);
+        text = text.replace(rateMatch[0], ' ').trim();
+        break;
+      }
+    }
+  }
+  
+  // 4. Calculate RATE from total price
+  // User says total price, we need rate per unit
+  if (totalPrice !== null) {
+    if (quantityNumber > 0) {
+      // Rate = Total Price / Quantity
+      rate = totalPrice / quantityNumber;
+    } else {
+      rate = totalPrice;
     }
   }
 
-  // 4. Rate Fallback (Implicit Rate)
-  // If we found Quantity (with units) but NO Rate, and there is a number left, it's likely the Rate.
-  // Example: "Tomato 2kg 50" -> 50 is Rate.
-  if (quantity && !rate) {
-    // Match number at the end of the string
-    const endNumberMatch = text.match(/\s(\d+(\.\d+)?)$/);
-    if (endNumberMatch) {
-      rate = parseFloat(endNumberMatch[1]);
-      text = text.replace(endNumberMatch[0], ' ').trim();
+  // 5. Fallback: Look for remaining numbers
+  if (!rate) {
+    const standaloneNumber = text.match(/\b(\d+(?:\.\d+)?)\b/);
+    if (standaloneNumber && quantity) {
+      totalPrice = parseFloat(standaloneNumber[1]);
+      rate = totalPrice / quantityNumber;
+      text = text.replace(standaloneNumber[0], ' ').trim();
     }
   }
 
-  // 5. Extract Name
+  // 6. Extract Name
   // Remove special chars but keep spaces, Tamil chars (\u0B80-\u0BFF), and hyphens
   let name = text.replace(/[^\w\s\u0B80-\u0BFF\-]/g, ' ').trim(); 
   name = name.replace(/\s+/g, ' ');
+  
+  // Capitalize first letter
   if (name.length > 0) {
     name = name.charAt(0).toUpperCase() + name.slice(1);
   }
@@ -131,8 +225,8 @@ const parseSegment = (segment: string): ParsedVoiceData => {
 export const parseContinuousInput = (fullTranscript: string): ParsedVoiceData[] => {
   const results: ParsedVoiceData[] = [];
   
-  // Normalize entire input first to handle splits correctly if rate is spoken in words
-  const normalizedTranscript = normalizeTamilText(fullTranscript);
+  // Normalize entire input first to handle splits correctly
+  const normalizedTranscript = normalizeNumbers(fullTranscript);
   
   // Logic: An item is completed when a Price (Rate) is mentioned.
   // We scan for Rate patterns to find split points.
@@ -143,7 +237,7 @@ export const parseContinuousInput = (fullTranscript: string): ParsedVoiceData[] 
   
   // Regex to find things like "50 rupees" or "rs 50" globally
   const splitRegex = new RegExp(
-    `(\\d+(\\.\\d+)?\\s*(${rateKeyPattern})|(${rateKeyPattern})\\s*\\d+(\\.\\d+)?)`, 
+    `(\\d+(?:\\.\\d+)?\\s*(?:${rateKeyPattern})|(?:${rateKeyPattern})\\s*\\d+(?:\\.\\d+)?)`, 
     'gi'
   );
 

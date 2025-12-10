@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/noto-sans-tamil": "^5.0.8",
     "jspdf": "^3.0.4",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",

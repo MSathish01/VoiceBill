@@ -46,28 +46,42 @@ export const TRANSLATIONS: Record<Language, Translation> = {
 // Regex Patterns for Parsing
 // Note: We include variations. The Parser will sort by length to match longest first.
 export const RATE_KEYWORDS = [
-  'rupees', 'rupee', 'rs', 'rupai', 'rooba', 'r', 'inr', '₹', // English/Symbols
-  'ரூபாய்', 'ரூ', 'விலை', 'ரூபாய்க்கு' // Tamil
+  // English variations (including common misheard)
+  'rupees', 'rupee', 'rupay', 'rupaya', 'roopees', 'rupies',
+  'rs', 'r', 'inr', '₹',
+  // Tamil variations
+  'ரூபாய்', 'ரூபா', 'ரூ', 'விலை', 'ரூபாய்க்கு', 'ரூபை',
+  // Common spoken patterns
+  'bucks', 'price'
 ];
 
 export const QUANTITY_KEYWORDS = [
-  // English
-  'kilogram', 'kilo', 'kgs', 'kg', 
-  'gram', 'gms', 'gm', 'g', 
-  'liters', 'liter', 'litre', 'ltr', 'l', 
-  'milli', 'ml', 
-  'packets', 'packet', 'pkt', 'pack', 'bundle', 'bunch',
-  'boxes', 'box', 'pieces', 'piece', 'pcs', 'nos', 'number', 'dozen',
+  // English - Weight
+  'kilogram', 'kilograms', 'kilo', 'kilos', 'kgs', 'kg',
+  'gram', 'grams', 'gms', 'gm', 'g',
+  // English - Volume  
+  'liters', 'liter', 'litre', 'litres', 'ltr', 'l',
+  'milliliters', 'milliliter', 'milli', 'ml',
+  // English - Count/Package
+  'packets', 'packet', 'pkt', 'pack', 'packs',
+  'bundle', 'bundles', 'bunch', 'bunches',
+  'boxes', 'box',
+  'pieces', 'piece', 'pcs', 'pc',
+  'nos', 'number', 'numbers', 'count',
+  'dozen', 'dozens', 'doz',
+  'unit', 'units',
   
-  // Tamil Units
-  'கிலோ', 'கி.கி', 'கி', // Kg
-  'கிராம்', 'கி.கி', // Gram
-  'லிட்டர்', 'லி', // Liter
-  'மில்லி', // Milli
-  'பாக்கெட்', 'பாக்', // Packet
-  'கட்டு', // Bundle
-  'எண்ணிக்கை', 'பீஸ்', 'பிஸ்', // Pieces/Count
-  'டஜன்', // Dozen
-  'மூட்டை', // Sack/Bag
-  'பெட்டி' // Box
+  // Tamil Units - Weight
+  'கிலோ', 'கிலோகிராம்', 'கி.கி', 'கி',
+  'கிராம்', 'கிரா',
+  // Tamil Units - Volume
+  'லிட்டர்', 'லி',
+  'மில்லி', 'மி.லி',
+  // Tamil Units - Count/Package
+  'பாக்கெட்', 'பாக்', 'பேக்',
+  'கட்டு', 'கட்டுகள்',
+  'எண்ணிக்கை', 'பீஸ்', 'பிஸ்',
+  'டஜன்',
+  'மூட்டை',
+  'பெட்டி'
 ];

@@ -19,6 +19,7 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
   hintText
 }) => {
   const recognitionRef = useRef<any>(null);
+  const [liveTranscript, setLiveTranscript] = useState<string>('');
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -36,6 +37,7 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
         for (let i = 0; i < event.results.length; ++i) {
           finalTranscript += event.results[i][0].transcript;
         }
+        setLiveTranscript(finalTranscript);
         onTranscriptChange(finalTranscript);
       };
 
@@ -50,6 +52,7 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
       recog.onend = () => {
         // Only trigger end logic if we were actually listening (avoids duplicate calls)
         setIsListening(false);
+        setLiveTranscript('');
         onListeningEnd();
       };
 
@@ -66,6 +69,7 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
     if (isListening) {
       recognitionRef.current.stop();
     } else {
+      setLiveTranscript('');
       recognitionRef.current.lang = language === 'ta' ? 'ta-IN' : 'en-IN';
       try {
         recognitionRef.current.start();
@@ -93,12 +97,24 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
         {isListening ? (
           <span className="flex items-center gap-2">
             <span className="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
-            Listening (Say multiple items)...
+            {language === 'ta' ? 'கேட்கிறது...' : 'Listening...'}
           </span>
         ) : (
           hintText
         )}
       </p>
+      
+      {/* Live Transcript Display */}
+      {isListening && liveTranscript && (
+        <div className="mt-3 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg max-w-md mx-4">
+          <p className="text-xs text-blue-500 font-medium mb-1">
+            {language === 'ta' ? '🎤 கேட்ட உரை:' : '🎤 Heard:'}
+          </p>
+          <p className="text-sm text-blue-800 font-medium break-words leading-relaxed">
+            {liveTranscript}
+          </p>
+        </div>
+      )}
     </div>
   );
 };
