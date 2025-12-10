@@ -224,7 +224,7 @@ const App: React.FC = () => {
   const handleDownloadPDF = async () => {
     setIsGeneratingPdf(true);
     try {
-      await generatePDF(allItems, userDetails, t, grandTotal);
+      await generatePDF(allItems, userDetails, grandTotal, language, t);
     } catch (error) {
       console.error("PDF generation failed:", error);
       alert("Something went wrong while generating the PDF. Please try again.");

@@ -1,353 +1,163 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { BillItem, UserDetails, Translation } from '../types';
+import { BillItem, UserDetails, Language, Translation } from '../types';
 import { TAMIL_FONT_BASE64 } from './tamilFontBase64';
 
-// ═══════════════════════════════════════════════════════════════
-// ROYAL TEAL THEME - Elegant Professional Color Palette
-// ═══════════════════════════════════════════════════════════════
-const THEME = {
-  primary: [13, 148, 136] as [number, number, number],       // Teal-600
-  primaryDark: [15, 118, 110] as [number, number, number],   // Teal-700
-  primaryDeep: [17, 94, 89] as [number, number, number],     // Teal-800
-  primaryLight: [204, 251, 241] as [number, number, number], // Teal-100
-  accent: [245, 158, 11] as [number, number, number],        // Gold/Amber-500
-  accentLight: [254, 243, 199] as [number, number, number],  // Amber-100
-  dark: [17, 24, 39] as [number, number, number],            // Gray-900
-  text: [55, 65, 81] as [number, number, number],            // Gray-700
-  textLight: [107, 114, 128] as [number, number, number],    // Gray-500
-  white: [255, 255, 255] as [number, number, number],
-  lightBg: [240, 253, 250] as [number, number, number],      // Teal-50
-  border: [153, 246, 228] as [number, number, number],       // Teal-200
-  cardBg: [247, 254, 252] as [number, number, number],       // Near-white teal tint
+// Register Tamil font
+const registerTamilFont = (doc: jsPDF): void => {
+  doc.addFileToVFS('NotoSansTamil-Regular.ttf', TAMIL_FONT_BASE64);
+  doc.addFont('NotoSansTamil-Regular.ttf', 'NotoSansTamil', 'normal', 'Identity-H');
 };
 
-// Tamil character detection
-const containsTamil = (text: string): boolean => /[\u0B80-\u0BFF]/.test(text);
-
-export const generatePDF = async (
+export const generatePDF = (
   items: BillItem[],
-  userDetails: UserDetails,
-  t: Translation,
-  grandTotal: number
-) => {
+  customer: UserDetails,
+  grandTotal: number,
+  language: Language,
+  t: Translation
+): void => {
   const doc = new jsPDF();
+  
+  // Register and set Tamil font
+  registerTamilFont(doc);
+  
+  const isTamil = language === 'ta';
+  const fontName = isTamil ? 'NotoSansTamil' : 'helvetica';
+  
+  // Page setup
   const pageWidth = doc.internal.pageSize.getWidth();
-
-  // Detect Tamil content
-  const hasTamilContent = containsTamil(t.title) || 
-    items.some(item => containsTamil(item.name)) ||
-    containsTamil(userDetails.name || '') ||
-    containsTamil(userDetails.address || '');
-
-  // Register Tamil font directly from embedded base64
-  let tamilFontLoaded = false;
-  try {
-    if (TAMIL_FONT_BASE64) {
-      // Add font to virtual file system
-      doc.addFileToVFS('NotoSansTamil-Regular.ttf', TAMIL_FONT_BASE64);
-      // Register font with Unicode encoding support
-      doc.addFont('NotoSansTamil-Regular.ttf', 'NotoSansTamil', 'normal', 'Identity-H');
-      tamilFontLoaded = true;
-      console.log('[PDF] Tamil font registered successfully with Identity-H encoding');
-    }
-  } catch (err) {
-    console.warn('[PDF] Font embedding failed:', err);
-  }
-
-  // Font helpers
-  const setTamilFont = () => tamilFontLoaded && doc.setFont('NotoSansTamil', 'normal');
-  const setDefaultFont = () => doc.setFont('helvetica', 'normal');
-  const setDefaultBold = () => doc.setFont('helvetica', 'bold');
-
-  // ═══════════════════════════════════════════════════════════════
-  // ROYAL TEAL HEADER DESIGN
-  // ═══════════════════════════════════════════════════════════════
+  const margin = 15;
   
-  // Main header gradient (solid teal)
-  doc.setFillColor(...THEME.primary);
-  doc.rect(0, 0, pageWidth, 48, 'F');
+  // Colors
+  const primaryColor: [number, number, number] = [0, 128, 128]; // Teal
+  const darkColor: [number, number, number] = [33, 37, 41];
+  const lightGray: [number, number, number] = [248, 249, 250];
   
-  // Darker accent strip
-  doc.setFillColor(...THEME.primaryDeep);
-  doc.rect(0, 44, pageWidth, 4, 'F');
+  // ===== HEADER =====
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, 0, pageWidth, 35, 'F');
   
-  // Gold accent line
-  doc.setFillColor(...THEME.accent);
-  doc.rect(0, 44, pageWidth, 1.5, 'F');
+  doc.setFont(fontName, 'normal');
+  doc.setFontSize(22);
+  doc.setTextColor(255, 255, 255);
+  const title = isTamil ? 'தினசரி வீட்டு பில்' : 'Daily Home Bill';
+  doc.text(title, pageWidth / 2, 20, { align: 'center' });
   
-  // Decorative corner triangles
-  doc.setFillColor(...THEME.primaryDark);
-  doc.triangle(0, 0, 25, 0, 0, 25, 'F');
-  doc.triangle(pageWidth, 0, pageWidth - 25, 0, pageWidth, 25, 'F');
-
-  // Small gold diamond decoration
-  doc.setFillColor(...THEME.accent);
-  doc.circle(pageWidth / 2, 4, 2, 'F');
-
-  // Title - Use Tamil font if available
-  doc.setTextColor(...THEME.white);
-  if (hasTamilContent && tamilFontLoaded) {
-    doc.setFont('NotoSansTamil', 'normal');
-    doc.setFontSize(20);
-  } else {
-    setDefaultBold();
-    doc.setFontSize(28);
-  }
-  doc.text(t.title, pageWidth / 2, 24, { align: 'center' });
-  
-  // Subtitle - Date (always English)
+  // Date
   doc.setFontSize(10);
-  setDefaultFont();
-  doc.setTextColor(...THEME.primaryLight);
-  const dateStr = new Date().toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: '2-digit',
+  const today = new Date();
+  const dateStr = today.toLocaleDateString(isTamil ? 'ta-IN' : 'en-IN', {
+    year: 'numeric',
     month: 'long',
-    year: 'numeric'
+    day: 'numeric'
   });
-  doc.text(dateStr, pageWidth / 2, 36, { align: 'center' });
-
-  // ═══════════════════════════════════════════════════════════════
-  // CUSTOMER INFO CARD
-  // ═══════════════════════════════════════════════════════════════
-  const cardY = 56;
-  const cardHeight = 36;
+  doc.text(dateStr, pageWidth / 2, 30, { align: 'center' });
   
-  // Card shadow
-  doc.setFillColor(200, 200, 200);
-  doc.roundedRect(12, cardY + 2, pageWidth - 24, cardHeight, 5, 5, 'F');
+  // ===== CUSTOMER INFO =====
+  let yPos = 50;
   
-  // Card background
-  doc.setFillColor(...THEME.white);
-  doc.roundedRect(10, cardY, pageWidth - 20, cardHeight, 5, 5, 'F');
+  doc.setFillColor(...lightGray);
+  doc.roundedRect(margin, yPos - 5, pageWidth - 2 * margin, 30, 3, 3, 'F');
   
-  // Card border
-  doc.setDrawColor(...THEME.border);
-  doc.setLineWidth(0.6);
-  doc.roundedRect(10, cardY, pageWidth - 20, cardHeight, 5, 5, 'S');
+  doc.setFont(fontName, 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...darkColor);
   
-  // Left accent bar (teal)
-  doc.setFillColor(...THEME.primary);
-  doc.roundedRect(10, cardY, 5, cardHeight, 5, 0, 'F');
-  doc.rect(13, cardY, 2, cardHeight, 'F');
+  const nameLabel = isTamil ? 'வாடிக்கையாளர்' : 'Customer';
+  const phoneLabel = isTamil ? 'தொலைபேசி' : 'Mobile';
   
-  // Section title
-  doc.setTextColor(...THEME.primary);
-  if (hasTamilContent && tamilFontLoaded) {
-    doc.setFont('NotoSansTamil', 'normal');
-    doc.setFontSize(11);
-  } else {
-    setDefaultBold();
-    doc.setFontSize(11);
-  }
-  doc.text(t.userDetails, 22, cardY + 11);
+  doc.text(`${nameLabel}: ${customer.name || '-'}`, margin + 5, yPos + 8);
+  doc.text(`${phoneLabel}: ${customer.mobile || '-'}`, margin + 5, yPos + 18);
   
-  // Customer details
-  doc.setFontSize(10);
-  let infoY = cardY + 22;
+  // ===== ITEMS TABLE =====
+  yPos = 95;
   
-  // Name & Phone
-  if (userDetails.name) {
-    if (containsTamil(userDetails.name) && tamilFontLoaded) {
-      doc.setFont('NotoSansTamil', 'normal');
-    } else {
-      setDefaultBold();
-    }
-    doc.setTextColor(...THEME.dark);
-    doc.text(userDetails.name, 22, infoY);
-  }
-  if (userDetails.mobile) {
-    setDefaultFont();
-    doc.setTextColor(...THEME.textLight);
-    doc.text('Ph: ' + userDetails.mobile, 95, infoY);
-  }
+  // Table headers - use Tamil text directly
+  const headers = isTamil 
+    ? [['வ.எண்', 'பொருள்', 'அளவு', 'விலை (₹)', 'மொத்தம் (₹)']]
+    : [['S.No', 'Item', 'Qty', 'Rate (₹)', 'Total (₹)']];
   
-  // Address & Email
-  infoY += 9;
-  if (userDetails.address) {
-    if (containsTamil(userDetails.address) && tamilFontLoaded) {
-      doc.setFont('NotoSansTamil', 'normal');
-    } else {
-      setDefaultFont();
-    }
-    doc.setTextColor(...THEME.textLight);
-    doc.text(userDetails.address, 22, infoY);
-  }
-  if (userDetails.email) {
-    setDefaultFont();
-    doc.text(userDetails.email, 120, infoY);
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // ITEMS TABLE - Royal Teal Theme with 5 Columns
-  // ═══════════════════════════════════════════════════════════════
-  // Column headers: Sl.No, Item Name, Quantity, Rate, Total
-  // Use Tamil headers: வ.எண், பொருள், அளவு, விலை, மொத்தம்
-  const tableColumn = [
-    hasTamilContent ? t.slNo : 'No.',
-    t.item,
-    t.quantity,
-    t.rate,
-    t.total
-  ];
-  const tableRows: any[][] = [];
-
-  items.forEach((item, index) => {
-    tableRows.push([
-      (index + 1).toString(),
-      item.name,
-      item.quantity,
-      `₹${item.rate.toFixed(2)}`,
-      `₹${(item.total || 0).toFixed(2)}`,
-    ]);
-  });
-
-  const baseFontSize = hasTamilContent ? 11 : 10;
-  const headerFontSize = hasTamilContent ? 12 : 11;
+  // Table body
+  const tableBody = items.map((item, index) => [
+    (index + 1).toString(),
+    item.name,
+    item.quantity.toString(),
+    item.rate.toFixed(2),
+    item.total.toFixed(2)
+  ]);
 
   autoTable(doc, {
-    head: [tableColumn],
-    body: tableRows,
-    startY: 100,
-    theme: 'plain',
+    startY: yPos,
+    head: headers,
+    body: tableBody,
+    theme: 'grid',
     styles: {
-      font: tamilFontLoaded ? 'NotoSansTamil' : 'helvetica',
-      fontSize: baseFontSize,
-      cellPadding: { top: 8, right: 6, bottom: 8, left: 6 },
-      textColor: THEME.text,
-      lineColor: THEME.border,
-      lineWidth: 0.4,
+      font: fontName,
+      fontSize: 10,
+      cellPadding: 5,
+      lineColor: [200, 200, 200],
+      lineWidth: 0.5,
     },
     headStyles: {
-      fillColor: THEME.primary,
-      textColor: THEME.white,
-      fontSize: headerFontSize,
-      fontStyle: 'bold',
-      cellPadding: { top: 10, right: 6, bottom: 10, left: 6 },
-      font: tamilFontLoaded ? 'NotoSansTamil' : 'helvetica',
+      font: fontName,
+      fillColor: primaryColor,
+      textColor: [255, 255, 255],
+      fontSize: 10,
+      fontStyle: 'normal',
+      halign: 'center',
     },
     bodyStyles: {
-      fillColor: THEME.white,
-    },
-    alternateRowStyles: {
-      fillColor: THEME.lightBg,
+      font: fontName,
+      textColor: darkColor,
     },
     columnStyles: {
-      0: { cellWidth: 18, halign: 'center', font: 'helvetica' },
-      1: { cellWidth: 'auto', font: tamilFontLoaded ? 'NotoSansTamil' : 'helvetica' },
-      2: { cellWidth: 30, halign: 'center', font: tamilFontLoaded ? 'NotoSansTamil' : 'helvetica' },
-      3: { cellWidth: 32, halign: 'right', font: 'helvetica' },
-      4: { cellWidth: 36, halign: 'right', fontStyle: 'bold', textColor: THEME.primaryDark, font: 'helvetica' },
+      0: { halign: 'center', cellWidth: 20 },
+      1: { halign: 'left', cellWidth: 60 },
+      2: { halign: 'center', cellWidth: 25 },
+      3: { halign: 'right', cellWidth: 35 },
+      4: { halign: 'right', cellWidth: 35 },
     },
+    margin: { left: margin, right: margin },
     didParseCell: (data) => {
-      // Ensure Tamil font for Tamil text in item names
-      if (data.column.index === 1 && data.cell.raw && typeof data.cell.raw === 'string') {
-        if (tamilFontLoaded && containsTamil(data.cell.raw)) {
-          data.cell.styles.font = 'NotoSansTamil';
-        }
-      }
-      // Ensure Tamil font for Tamil text in quantity column
-      if (data.column.index === 2 && data.cell.raw && typeof data.cell.raw === 'string') {
-        if (tamilFontLoaded && containsTamil(data.cell.raw)) {
-          data.cell.styles.font = 'NotoSansTamil';
-        }
+      // Force Tamil font for all cells
+      if (isTamil) {
+        data.cell.styles.font = 'NotoSansTamil';
       }
     },
-    margin: { left: 10, right: 10 },
-    tableLineColor: THEME.border,
-    tableLineWidth: 0.5,
   });
 
-  // ═══════════════════════════════════════════════════════════════
-  // GRAND TOTAL BOX - Royal Teal with Gold Accent
-  // ═══════════════════════════════════════════════════════════════
-  const finalY = (doc as any).lastAutoTable.finalY + 14;
+  // Get final Y position after table
+  const finalY = (doc as any).lastAutoTable?.finalY || yPos + 50;
   
-  // Box shadow
-  doc.setFillColor(180, 180, 180);
-  doc.roundedRect(pageWidth - 102, finalY + 2, 90, 30, 6, 6, 'F');
+  // ===== GRAND TOTAL =====
+  yPos = finalY + 15;
   
-  // Main teal box
-  doc.setFillColor(...THEME.primaryDark);
-  doc.roundedRect(pageWidth - 100, finalY, 90, 30, 6, 6, 'F');
+  doc.setFillColor(...primaryColor);
+  doc.roundedRect(pageWidth - margin - 80, yPos - 5, 80, 20, 3, 3, 'F');
   
-  // Gold border
-  doc.setDrawColor(...THEME.accent);
-  doc.setLineWidth(2);
-  doc.roundedRect(pageWidth - 100, finalY, 90, 30, 6, 6, 'S');
+  doc.setFont(fontName, 'normal');
+  doc.setFontSize(12);
+  doc.setTextColor(255, 255, 255);
   
-  // Small gold accent at top
-  doc.setFillColor(...THEME.accent);
-  doc.rect(pageWidth - 80, finalY, 40, 2, 'F');
+  const totalLabel = isTamil ? 'மொத்தம்' : 'Total';
+  doc.text(`${totalLabel}: ₹${grandTotal.toFixed(2)}`, pageWidth - margin - 75, yPos + 7);
   
-  // Total label
-  doc.setTextColor(...THEME.white);
-  if (hasTamilContent && tamilFontLoaded) {
-    doc.setFont('NotoSansTamil', 'normal');
-    doc.setFontSize(10);
-  } else {
-    setDefaultFont();
-    doc.setFontSize(10);
-  }
-  doc.text(t.grandTotal, pageWidth - 92, finalY + 12);
+  // ===== FOOTER =====
+  const pageHeight = doc.internal.pageSize.getHeight();
   
-  // Total amount with gold color
-  doc.setTextColor(...THEME.accent);
-  doc.setFontSize(18);
-  setDefaultBold();
-  doc.text(`₹${grandTotal.toFixed(2)}`, pageWidth - 16, finalY + 24, { align: 'right' });
-
-  // ═══════════════════════════════════════════════════════════════
-  // FOOTER - Elegant Design
-  // ═══════════════════════════════════════════════════════════════
-  const footerY = finalY + 50;
+  doc.setFillColor(...lightGray);
+  doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
   
-  // Decorative divider line
-  doc.setDrawColor(...THEME.primary);
-  doc.setLineWidth(1);
-  doc.line(10, footerY - 10, pageWidth - 10, footerY - 10);
-  
-  // Center decoration (teal dots)
-  doc.setFillColor(...THEME.primary);
-  doc.circle(pageWidth / 2 - 15, footerY - 10, 1.8, 'F');
-  doc.circle(pageWidth / 2, footerY - 10, 2.5, 'F');
-  doc.circle(pageWidth / 2 + 15, footerY - 10, 1.8, 'F');
-  
-  // Gold dot in center
-  doc.setFillColor(...THEME.accent);
-  doc.circle(pageWidth / 2, footerY - 10, 1, 'F');
-  
-  // App branding
+  doc.setFont(fontName, 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(...THEME.textLight);
-  setDefaultFont();
-  doc.text('Generated by VoiceBill App', 14, footerY);
+  doc.setTextColor(100, 100, 100);
   
-  // Bill reference
-  const billRef = `REF: VB-${Date.now().toString(36).toUpperCase()}`;
-  doc.text(billRef, pageWidth - 14, footerY, { align: 'right' });
+  const footerText = isTamil 
+    ? 'VoiceBill மூலம் உருவாக்கப்பட்டது | நன்றி!'
+    : 'Generated by VoiceBill | Thank you!';
+  doc.text(footerText, pageWidth / 2, pageHeight - 8, { align: 'center' });
   
-  // Thank you message
-  doc.setFontSize(10);
-  doc.setTextColor(...THEME.primary);
-  if (hasTamilContent && tamilFontLoaded) {
-    doc.setFont('NotoSansTamil', 'normal');
-    doc.text('நன்றி! மீண்டும் வாருங்கள்', pageWidth / 2, footerY + 10, { align: 'center' });
-  } else {
-    setDefaultFont();
-    doc.text('Thank you for your business!', pageWidth / 2, footerY + 10, { align: 'center' });
-  }
-  
-  // Bottom teal strip
-  doc.setFillColor(...THEME.primaryLight);
-  doc.rect(0, footerY + 18, pageWidth, 3, 'F');
-
-  // ═══════════════════════════════════════════════════════════════
-  // SAVE PDF
-  // ═══════════════════════════════════════════════════════════════
-  const fileName = `VoiceBill_${new Date().toISOString().slice(0, 10)}_${Date.now()}.pdf`;
+  // ===== SAVE PDF =====
+  const fileName = `bill_${customer.name || 'customer'}_${today.toISOString().split('T')[0]}.pdf`;
   doc.save(fileName);
-  
-  return fileName;
 };
