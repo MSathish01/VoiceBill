@@ -114,68 +114,354 @@ const RATE_CORRECTIONS: Record<string, string> = {
   'ருபா': 'ரூபாய்'
 };
 
-// Common Tamil grocery item names for splitting detection (expanded list)
-const TAMIL_ITEM_NAMES = [
-  // Vegetables
-  'தக்காளி', 'வெங்காயம்', 'உருளைக்கிழங்கு', 'உருளை', 'கத்திரிக்காய்', 'கத்திரி',
-  'முருங்கைக்காய்', 'பாகற்காய்', 'புடலங்காய்', 'சுரைக்காய்', 'வெண்டைக்காய்',
-  'பீன்ஸ்', 'கேரட்', 'பீட்ரூட்', 'முள்ளங்கி', 'கீரை', 'கொத்தமல்லி', 'புதினா',
-  'பூசணிக்காய்', 'மிளகாய்', 'பச்சை மிளகாய்', 'இஞ்சி', 'பூண்டு', 'தேங்காய்',
-  'முட்டைகோஸ்', 'காலிஃப்ளவர்', 'குடைமிளகாய்', 'சௌசௌ', 'அவரைக்காய்',
-  'பட்டாணி', 'சின்ன வெங்காயம்', 'பெரிய வெங்காயம்', 'வாழைத்தண்டு',
-  // Grains
-  'அரிசி', 'பருப்பு', 'கோதுமை', 'ரவை', 'மைதா', 'துவரம் பருப்பு',
-  'உளுந்து', 'கடலை பருப்பு', 'பாசிப்பருப்பு', 'கம்பு', 'ராகி',
-  // Fruits
-  'வாழைப்பழம்', 'ஆப்பிள்', 'ஆரஞ்சு', 'திராட்சை', 'மாம்பழம்', 'மாங்காய்',
-  'பப்பாளி', 'கொய்யா', 'தர்பூசணி', 'பேரிக்காய்', 'மாதுளை', 'சப்போட்டா',
-  // Dairy
-  'பால்', 'தயிர்', 'மோர்', 'நெய்', 'வெண்ணெய்', 'பன்னீர்', 'சீஸ்',
-  // Meat & Eggs
-  'முட்டை', 'மீன்', 'கோழி', 'சிக்கன்', 'மட்டன்', 'இறால்',
-  // Spices & Oils
-  'எண்ணெய்', 'நல்லெண்ணெய்', 'தேங்காய் எண்ணெய்', 'உப்பு', 'சர்க்கரை', 
-  'மிளகு', 'மஞ்சள்', 'சீரகம்', 'கடுகு', 'வெந்தயம்',
-  // Common English items
-  'tomato', 'onion', 'potato', 'carrot', 'beans', 'milk', 'rice', 'egg', 'eggs',
-  'chicken', 'mutton', 'fish', 'oil', 'sugar', 'salt', 'apple', 'banana', 'orange',
-  'curd', 'butter', 'cheese', 'paneer', 'bread', 'atta', 'maida', 'dal'
-];
+// ============================================================================
+// UNIVERSAL MULTI-DOMAIN LEXICON FOR GENERAL BILLING
+// Comprehensive vocabulary covering daily needs products, general merchandise,
+// and services typical for small businesses and home use
+// ============================================================================
 
-// Tamil ASR correction map - common misheard words
+const UNIVERSAL_ITEM_LEXICON = {
+  // AGRICULTURE & VEGETABLES (விவசாயம் & காய்கறிகள்)
+  vegetables: {
+    tamil: [
+      'தக்காளி', 'வெங்காயம்', 'உருளைக்கிழங்கு', 'உருளை', 'கத்திரிக்காய்', 'கத்திரி',
+      'முருங்கைக்காய்', 'பாகற்காய்', 'புடலங்காய்', 'சுரைக்காய்', 'வெண்டைக்காய்',
+      'பீன்ஸ்', 'கேரட்', 'பீட்ரூட்', 'முள்ளங்கி', 'கீரை', 'கொத்தமல்லி', 'புதினா',
+      'பூசணிக்காய்', 'மிளகாய்', 'பச்சை மிளகாய்', 'இஞ்சி', 'பூண்டு', 'தேங்காய்',
+      'முட்டைகோஸ்', 'காலிஃப்ளவர்', 'குடைமிளகாய்', 'சௌசௌ', 'அவரைக்காய்',
+      'பட்டாணி', 'சின்ன வெங்காயம்', 'பெரிய வெங்காயம்', 'வாழைத்தண்டு',
+      'நூல்கோல்', 'சேப்பங்கிழங்கு', 'கருணைக்கிழங்கு', 'மரவள்ளிக்கிழங்கு',
+      'புளிச்சை கீரை', 'அரைக்கீரை', 'பசலைக்கீரை', 'அகத்தி கீரை'
+    ],
+    english: [
+      'tomato', 'tomatoes', 'onion', 'onions', 'potato', 'potatoes', 'carrot', 'carrots',
+      'beans', 'green beans', 'brinjal', 'eggplant', 'okra', 'lady finger',
+      'drumstick', 'bitter gourd', 'bottle gourd', 'ridge gourd', 'snake gourd',
+      'beetroot', 'radish', 'spinach', 'coriander', 'mint', 'ginger', 'garlic',
+      'coconut', 'cabbage', 'cauliflower', 'capsicum', 'bell pepper', 'chayote',
+      'peas', 'sweet potato', 'tapioca', 'yam', 'plantain stem'
+    ]
+  },
+
+  // GRAINS & PULSES (தானியங்கள் & பருப்பு வகைகள்)
+  grains: {
+    tamil: [
+      'அரிசி', 'பருப்பு', 'கோதுமை', 'ரவை', 'மைதா', 'துவரம் பருப்பு',
+      'உளுந்து', 'கடலை பருப்பு', 'பாசிப்பருப்பு', 'கம்பு', 'ராகி',
+      'சோளம்', 'வரகு', 'சாமை', 'குதிரைவாலி', 'தினை',
+      'கருப்பு உளுந்து', 'வெள்ளை உளுந்து', 'மொச்சை', 'காராமணி'
+    ],
+    english: [
+      'rice', 'dal', 'lentils', 'wheat', 'semolina', 'maida', 'flour',
+      'toor dal', 'moong dal', 'urad dal', 'chana dal', 'masoor dal',
+      'pearl millet', 'finger millet', 'corn', 'maize', 'barley', 'oats',
+      'quinoa', 'black gram', 'green gram', 'chickpeas', 'atta'
+    ]
+  },
+
+  // FRUITS (பழங்கள்)
+  fruits: {
+    tamil: [
+      'வாழைப்பழம்', 'ஆப்பிள்', 'ஆரஞ்சு', 'திராட்சை', 'மாம்பழம்', 'மாங்காய்',
+      'பப்பாளி', 'கொய்யா', 'தர்பூசணி', 'பேரிக்காய்', 'மாதுளை', 'சப்போட்டா',
+      'அன்னாசிப்பழம்', 'கமலாப்பழம்', 'நாவற்பழம்', 'இலந்தைப்பழம்',
+      'நெல்லிக்காய்', 'எலுமிச்சை', 'சாத்துக்குடி', 'இளநீர்', 'பலாப்பழம்'
+    ],
+    english: [
+      'banana', 'bananas', 'apple', 'apples', 'orange', 'oranges', 'grapes',
+      'mango', 'mangoes', 'papaya', 'guava', 'watermelon', 'pear', 'pomegranate',
+      'sapota', 'pineapple', 'custard apple', 'jamun', 'jujube', 'gooseberry',
+      'lemon', 'lime', 'sweet lime', 'coconut water', 'jackfruit', 'dates',
+      'figs', 'kiwi', 'dragon fruit', 'passion fruit'
+    ]
+  },
+
+  // DAIRY PRODUCTS (பால் பொருட்கள்)
+  dairy: {
+    tamil: [
+      'பால்', 'தயிர்', 'மோர்', 'நெய்', 'வெண்ணெய்', 'பன்னீர்', 'சீஸ்',
+      'க்ரீம்', 'மில்க் பவுடர்', 'மில்க்மெய்ட்', 'ஐஸ் க்ரீம்'
+    ],
+    english: [
+      'milk', 'curd', 'yogurt', 'buttermilk', 'ghee', 'butter', 'paneer',
+      'cheese', 'cream', 'milk powder', 'condensed milk', 'ice cream',
+      'mozzarella', 'cottage cheese'
+    ]
+  },
+
+  // MEAT, POULTRY & SEAFOOD (இறைச்சி & கடல் உணவு)
+  meat: {
+    tamil: [
+      'முட்டை', 'மீன்', 'கோழி', 'சிக்கன்', 'மட்டன்', 'இறால்', 'நண்டு',
+      'கல்மீன்', 'வாவல் மீன்', 'சுறா மீன்', 'கெத்தி மீன்', 'வஞ்சிரம்'
+    ],
+    english: [
+      'egg', 'eggs', 'chicken', 'mutton', 'goat meat', 'beef', 'pork',
+      'fish', 'prawns', 'shrimp', 'crab', 'squid', 'tuna', 'salmon',
+      'sardines', 'mackerel', 'pomfret', 'kingfish'
+    ]
+  },
+
+  // SPICES & CONDIMENTS (மசாலா & சுவையூட்டிகள்)
+  spices: {
+    tamil: [
+      'உப்பு', 'சர்க்கரை', 'மிளகு', 'மஞ்சள்', 'சீரகம்', 'கடுகு', 'வெந்தயம்',
+      'கொத்தமல்லி விதை', 'ஏலக்காய்', 'லவங்கம்', 'தாலிச்சம் பத்திரி',
+      'சின்னமன்', 'சோம்பு', 'பெருங்காயம்', 'மிளகாய்த்தூள்',
+      'கரம் மசாலா', 'சாம்பார் பவுடர்', 'ரசம் பவுடர்'
+    ],
+    english: [
+      'salt', 'sugar', 'jaggery', 'pepper', 'turmeric', 'cumin', 'mustard seeds',
+      'fenugreek', 'coriander seeds', 'cardamom', 'cloves', 'bay leaves',
+      'cinnamon', 'fennel', 'asafoetida', 'red chili powder', 'garam masala',
+      'sambar powder', 'rasam powder', 'vanilla', 'oregano', 'basil'
+    ]
+  },
+
+  // OILS & COOKING MEDIUMS (எண்ணெய் & சமையல் ஊடகம்)
+  oils: {
+    tamil: [
+      'எண்ணெய்', 'நல்லெண்ணெய்', 'தேங்காய் எண்ணெய்', 'கடலை எண்ணெய்',
+      'சூரியகாந்தி எண்ணெய்', 'ஆலிவ் ஆயில்', 'நெய்'
+    ],
+    english: [
+      'oil', 'cooking oil', 'sesame oil', 'coconut oil', 'groundnut oil',
+      'sunflower oil', 'olive oil', 'mustard oil', 'ghee', 'vegetable oil'
+    ]
+  },
+
+  // HOUSEHOLD ITEMS (வீட்டு பொருட்கள்)
+  household: {
+    tamil: [
+      'சோப்பு', 'ஷாம்பூ', 'டூத் பேஸ்ட்', 'டூத் பிரஷ்', 'டிஷ் வாஷ்',
+      'கிளீனிங் பவுடர்', 'நாப்கின்', 'டிஷ்யூ', 'பேப்பர்', 'பேனா',
+      'பென்சில்', 'ரப்பர்', 'நோட்புக்', 'கேண்டில்', 'மாட்ச் பாக்ஸ்'
+    ],
+    english: [
+      'soap', 'shampoo', 'toothpaste', 'toothbrush', 'dishwash', 'detergent',
+      'cleaning powder', 'napkin', 'tissue', 'toilet paper', 'pen', 'pencil',
+      'eraser', 'notebook', 'candle', 'matches', 'batteries', 'bulb',
+      'incense sticks', 'mosquito coil'
+    ]
+  },
+
+  // BEVERAGES (பானங்கள்)
+  beverages: {
+    tamil: [
+      'டீ', 'காபி', 'பால் டீ', 'கிரீன் டீ', 'ஜூஸ்', 'கோல்ட் ட்ரிங்க்',
+      'மினரல் வாட்டர்', 'பட்டர்மில்க்', 'லஸ்ஸி'
+    ],
+    english: [
+      'tea', 'coffee', 'green tea', 'juice', 'cold drink', 'soft drink',
+      'mineral water', 'buttermilk', 'lassi', 'energy drink'
+    ]
+  },
+
+  // SNACKS & PACKAGED FOODS (தின்பண்டங்கள்)
+  snacks: {
+    tamil: [
+      'பிஸ்கட்', 'நம்கீன்', 'சிப்ஸ்', 'சாக்லேட்', 'ட்டாஃபி', 'கேக்',
+      'ரஸ்க்', 'மிக்சர்', 'முருக்கு', 'சீடை'
+    ],
+    english: [
+      'biscuits', 'cookies', 'namkeen', 'chips', 'chocolate', 'toffee',
+      'cake', 'rusk', 'mixture', 'murukku', 'seedai', 'crackers'
+    ]
+  },
+
+  // STATIONERY & OFFICE SUPPLIES (எழுது பொருள்கள்)
+  stationery: {
+    tamil: [
+      'பேனா', 'பென்சில்', 'ரப்பர்', 'நோட்புக்', 'பேப்பர்', 'என்வலப்',
+      'स्केल', 'கிளிப்', 'ஸ்டேப்பிளர்', 'கேர்பன் பேப்பர்'
+    ],
+    english: [
+      'pen', 'pencil', 'eraser', 'notebook', 'paper', 'envelope',
+      'ruler', 'scale', 'clip', 'stapler', 'carbon paper', 'marker',
+      'highlighter', 'glue', 'tape'
+    ]
+  },
+
+  // MEDICINES & HEALTH (மருந்து & ஆரோக்கியம்)
+  medicines: {
+    tamil: [
+      'மாத்திரை', 'மருந்து', 'சிரப்', 'ஆன்டிசெப்டிக்', 'பேண்டேஜ்',
+      'காட்டன்', 'தெர்மாமீட்டர்', 'சானிடைசர்', 'மாஸ்க்'
+    ],
+    english: [
+      'tablet', 'medicine', 'syrup', 'antiseptic', 'bandage',
+      'cotton', 'thermometer', 'sanitizer', 'mask', 'vitamin'
+    ]
+  },
+
+  // PERSONAL CARE (தனிப்பட்ட பராமரிப்பு)
+  personalCare: {
+    tamil: [
+      'சோப்பு', 'ஷாம்பூ', 'ஹேர் ஆயில்', 'க்ரீம்', 'லோஷன்',
+      'டியோடரன்ட்', 'பெர்ஃப்யூம்', 'ஹேர் ஜெல்'
+    ],
+    english: [
+      'soap', 'shampoo', 'hair oil', 'cream', 'lotion',
+      'deodorant', 'perfume', 'hair gel', 'face wash', 'moisturizer'
+    ]
+  }
+};
+
+// Flattened array of all items for parsing (maintaining backward compatibility)
+const TAMIL_ITEM_NAMES = Object.values(UNIVERSAL_ITEM_LEXICON)
+  .flatMap(category => [...(category.tamil || []), ...(category.english || [])]);
+
+// ============================================================================
+// SEMANTIC VERIFICATION & ASR CORRECTION ENGINE
+// Handles Tamil linguistic nuances, jargon, and transcription errors
+// ============================================================================
+
+// Tamil ASR correction map - comprehensive error corrections
 const TAMIL_ASR_CORRECTIONS: Record<string, string> = {
-  'தக்காள': 'தக்காளி',
-  'வெங்கயம்': 'வெங்காயம்',
-  'வெங்காயம': 'வெங்காயம்',
-  'உருளக்கிழங்கு': 'உருளைக்கிழங்கு',
-  'உருளகிழங்கு': 'உருளைக்கிழங்கு',
-  'கத்தரிக்காய்': 'கத்திரிக்காய்',
-  'கத்தரி': 'கத்திரிக்காய்',
-  'முருங்கை': 'முருங்கைக்காய்',
-  'கிலோகிராம்': 'கிலோ',
-  'கிலோகிரா': 'கிலோ',
-  'லிட்டரு': 'லிட்டர்',
+  // Vegetables corrections
+  'தக்காள': 'தக்காளி', 'தக்கால': 'தக்காளி', 'டமேட்': 'தக்காளி',
+  'வெங்கயம்': 'வெங்காயம்', 'வெங்காயம': 'வெங்காயம்', 'ஒனியன்': 'வெங்காயம்',
+  'உருளக்கிழங்கு': 'உருளைக்கிழங்கு', 'உருளகிழங்கு': 'உருளைக்கிழங்கு', 'உருளை': 'உருளைக்கிழங்கு',
+  'கத்தரிக்காய்': 'கத்திரிக்காய்', 'கத்தரி': 'கத்திரிக்காய்', 'கத்ரி': 'கத்திரிக்காய்',
+  'முருங்கை': 'முருங்கைக்காய்', 'முருங்க': 'முருங்கைக்காய்', 'ட்ரம் ஸ்டிக்': 'முருங்கைக்காய்',
+  'வெண்டக்காய்': 'வெண்டைக்காய்', 'வெண்டை': 'வெண்டைக்காய்', 'லேடி ஃபிங்கர்': 'வெண்டைக்காய்',
+  
+  // Units corrections
+  'கிலோகிராம்': 'கிலோ', 'கிலோகிரா': 'கிலோ', 'கிகி': 'கிலோ', 'கேஜி': 'கிலோ',
+  'லிட்டரு': 'லிட்டர்', 'லிட்ட': 'லிட்டர்', 'லிட்': 'லிட்டர்',
+  'கிராமு': 'கிராம்', 'கிரா': 'கிராம்', 'ஜிஎம்': 'கிராம்',
+  
+  // Fruits corrections
+  'வாழப்பழம்': 'வாழைப்பழம்', 'வாழை': 'வாழைப்பழம்', 'பனானா': 'வாழைப்பழம்',
+  'ஆப்பல்': 'ஆப்பிள்', 'ஆப்': 'ஆப்பிள்', 'ஆப்பிற்': 'ஆப்பிள்',
+  'ஆரஞ்': 'ஆரஞ்சு', 'ஆரஞ்ச்': 'ஆரஞ்சு', 'ஆர்': 'ஆரஞ்சு',
+  'மாம்பழ': 'மாம்பழம்', 'மாங்': 'மாம்பழம்', 'மேங்கோ': 'மாம்பழம்',
+  
+  // Dairy corrections  
+  'பாலு': 'பால்', 'மில்': 'பால்', 'மில்க்': 'பால்',
+  'தயிரு': 'தயிர்', 'கர்ட்': 'தயிர்', 'தகிர்': 'தயிர்',
+  'நெய்யு': 'நெய்', 'கீ': 'நெய்',
+  
+  // Grains corrections
+  'அரிசியு': 'அரிசி', 'ரைஸ்': 'அரிசி', 'அரிசிய்': 'அரிசி',
+  'பருப்பு': 'பருப்பு', 'தால்': 'பருப்பு', 'பருப்': 'பருப்பு',
+  'கோதுமையு': 'கோதுமை', 'வீட்': 'கோதுமை',
+  
+  // Common English misheard as Tamil
+  'டமேட்டோ': 'தக்காளி', 'ஒனியன்': 'வெங்காயம்', 'பொட்டேட்டோ': 'உருளைக்கிழங்கு',
+  'கேரட்டு': 'கேரட்', 'பீன்ஸ': 'பீன்ஸ்', 'ரைஸு': 'அரிசி',
+  
+  // Quantity misheard
+  'அரைய்': 'அரை', 'கால்லு': 'கால்', 'முக்கால்லு': 'முக்கால்',
+  'ஒன்னரையு': 'ஒன்னரை', 'ஒண்ணரையு': 'ஒண்ணரை'
+};
+
+// ============================================================================
+// SEMANTIC SIMILARITY ENGINE FOR ROBUST ITEM RECOGNITION
+// Implements fuzzy matching for handling ASR errors and variations
+// ============================================================================
+
+/**
+ * Calculate semantic similarity between two strings using Levenshtein distance
+ * Returns a similarity score between 0 and 1 (1 = identical)
+ */
+const calculateSimilarity = (str1: string, str2: string): number => {
+  const len1 = str1.length;
+  const len2 = str2.length;
+  const matrix = Array.from({ length: len1 + 1 }, () => Array(len2 + 1).fill(0));
+
+  for (let i = 0; i <= len1; i++) matrix[i][0] = i;
+  for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= len1; i++) {
+    for (let j = 1; j <= len2; j++) {
+      const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,     // deletion
+        matrix[i][j - 1] + 1,     // insertion
+        matrix[i - 1][j - 1] + cost // substitution
+      );
+    }
+  }
+
+  const maxLen = Math.max(len1, len2);
+  return maxLen === 0 ? 1 : 1 - matrix[len1][len2] / maxLen;
 };
 
 /**
+ * Semantic verification function that corrects misrecognized items
+ * using fuzzy matching against the universal lexicon
+ */
+const performSemanticVerification = (word: string): string => {
+  const normalizedWord = word.toLowerCase().trim();
+  const SIMILARITY_THRESHOLD = 0.8; // 80% similarity required
+  
+  let bestMatch = word;
+  let bestScore = 0;
+  
+  // Check against all items in universal lexicon
+  for (const item of TAMIL_ITEM_NAMES) {
+    const similarity = calculateSimilarity(normalizedWord, item.toLowerCase());
+    if (similarity >= SIMILARITY_THRESHOLD && similarity > bestScore) {
+      bestScore = similarity;
+      bestMatch = item;
+    }
+  }
+  
+  return bestMatch;
+};
+
+/**
+ * Enhanced preprocessing with code-mixing support
  * Pre-processes the transcript to fix common ASR issues:
  * 1. Replaces periods/commas with spaces (ASR artifacts)
- * 2. Normalizes whitespace
- * 3. Applies Tamil ASR corrections
+ * 2. Handles code-mixed content (English-Tamil mixing)  
+ * 3. Applies comprehensive Tamil ASR corrections
+ * 4. Performs semantic verification for better item recognition
+ * 5. Normalizes whitespace
  */
 const preprocessTranscript = (text: string): string => {
   let processed = text;
   
-  // Replace periods and commas with spaces (ASR often inserts these incorrectly)
+  // Step 1: Replace periods and commas with spaces (ASR artifacts)
   processed = processed.replace(/[.,;:]+/g, ' ');
   
-  // Apply Tamil ASR corrections
+  // Step 2: Handle code-mixed content (English-Tamil mixing)
+  // Normalize common English items spoken in Tamil context
+  const codeMixingMap: Record<string, string> = {
+    'டமேட்டோ': 'தக்காளி', 'ஒனியன்': 'வெங்காயம்', 'பொட்டேட்டோ': 'உருளைக்கிழங்கு',
+    'மில்க்': 'பால்', 'ரைஸ்': 'அரிசி', 'ஷுகர்': 'சர்க்கரை',
+    'சால்ட்': 'உப்பு', 'ஆயில்': 'எண்ணெய்', 'சிக்கன்': 'கோழி',
+    'பிஸ்கட்ஸ்': 'பிஸ்கட்', 'சோப்ஸ்': 'சோப்பு'
+  };
+  
+  Object.keys(codeMixingMap).forEach(key => {
+    const regex = new RegExp(`\\b${key}\\b`, 'gi');
+    processed = processed.replace(regex, codeMixingMap[key]);
+  });
+  
+  // Step 3: Apply comprehensive Tamil ASR corrections
   Object.keys(TAMIL_ASR_CORRECTIONS).forEach(key => {
-    const regex = new RegExp(key, 'gi');
+    const regex = new RegExp(`\\b${key}\\b`, 'gi');
     processed = processed.replace(regex, TAMIL_ASR_CORRECTIONS[key]);
   });
   
-  // Normalize whitespace
+  // Step 4: Apply semantic verification for remaining words (excluding numbers and keywords)
+  const words = processed.split(/\s+/);
+  const verifiedWords = words.map(word => {
+    // Skip numbers, rate keywords, quantity keywords, and very short words
+    if (word.length > 2 && 
+        !(/\d/.test(word)) && 
+        !RATE_KEYWORDS.some(keyword => keyword.toLowerCase() === word.toLowerCase()) && 
+        !QUANTITY_KEYWORDS.some(keyword => keyword.toLowerCase() === word.toLowerCase())) {
+      return performSemanticVerification(word);
+    }
+    return word;
+  });
+  
+  processed = verifiedWords.join(' ');
+  
+  // Step 5: Normalize whitespace
   processed = processed.replace(/\s+/g, ' ').trim();
   
   return processed;
