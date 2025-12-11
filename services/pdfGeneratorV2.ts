@@ -72,32 +72,6 @@ export const generatePDFWithTamilSupport = async (
         </p>
       </div>
 
-      <!-- Customer Info -->
-      <div style="
-        margin: 20px;
-        padding: 15px 20px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border-left: 4px solid #008080;
-      ">
-        <div style="display: flex; flex-wrap: wrap; gap: 8px 40px;">
-          <p style="margin: 0; font-size: 14px; font-family: ${tamilFontFamily}; min-width: 200px;">
-            <strong>${isTamil ? 'வாடிக்கையாளர்' : 'Customer'}:</strong> ${customer.name || '-'}
-          </p>
-          <p style="margin: 0; font-size: 14px; font-family: ${tamilFontFamily}; min-width: 200px;">
-            <strong>${isTamil ? 'தொலைபேசி' : 'Mobile'}:</strong> ${customer.mobile || '-'}
-          </p>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px 40px; margin-top: 8px;">
-          <p style="margin: 0; font-size: 14px; font-family: ${tamilFontFamily}; min-width: 200px;">
-            <strong>${isTamil ? 'முகவரி' : 'Address'}:</strong> ${customer.address || '-'}
-          </p>
-          <p style="margin: 0; font-size: 14px; font-family: ${tamilFontFamily}; min-width: 200px;">
-            <strong>${isTamil ? 'மின்னஞ்சல்' : 'Email'}:</strong> ${customer.email || '-'}
-          </p>
-        </div>
-      </div>
-
       <!-- Items Table -->
       <div style="margin: 20px;">
         <table style="
@@ -168,6 +142,32 @@ export const generatePDFWithTamilSupport = async (
         </div>
       </div>
 
+      <!-- Customer Info -->
+      <div style="
+        margin: 20px;
+        padding: 15px 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #008080;
+      ">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px 40px;">
+          <p style="margin: 0; font-size: 14px; font-family: ${tamilFontFamily}; min-width: 200px;">
+            <strong>${isTamil ? 'வாடிக்கையாளர்' : 'Customer'}:</strong> ${customer.name || '-'}
+          </p>
+          <p style="margin: 0; font-size: 14px; font-family: ${tamilFontFamily}; min-width: 200px;">
+            <strong>${isTamil ? 'தொலைபேசி' : 'Mobile'}:</strong> ${customer.mobile || '-'}
+          </p>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px 40px; margin-top: 8px;">
+          <p style="margin: 0; font-size: 14px; font-family: ${tamilFontFamily}; min-width: 200px;">
+            <strong>${isTamil ? 'முகவரி' : 'Address'}:</strong> ${customer.address || '-'}
+          </p>
+          <p style="margin: 0; font-size: 14px; font-family: ${tamilFontFamily}; min-width: 200px;">
+            <strong>${isTamil ? 'மின்னஞ்சல்' : 'Email'}:</strong> ${customer.email || '-'}
+          </p>
+        </div>
+      </div>
+
       <!-- Footer -->
       <div style="
         margin-top: 30px;
@@ -176,8 +176,10 @@ export const generatePDFWithTamilSupport = async (
         text-align: center;
         font-family: ${tamilFontFamily};
       ">
-        <p style="margin: 0 0 8px 0; font-size: 12px; color: #008080; font-weight: 600;">
-          SmartGoNext
+        <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600;">
+          <a href="https://www.smartgonext.com/" style="color: #008080; text-decoration: none;">
+            SmartGoNext Software Solution
+          </a>
         </p>
         <p style="margin: 0; font-size: 11px; color: #6c757d;">
           ${isTamil 

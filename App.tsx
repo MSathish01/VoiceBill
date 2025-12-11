@@ -62,6 +62,9 @@ const App: React.FC = () => {
   });
   const [isListening, setIsListening] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [includePriceInVoice, setIncludePriceInVoice] = useState(true);
+  const [showEditInterface, setShowEditInterface] = useState(false);
+  const [editingItems, setEditingItems] = useState<BillItem[]>([]);
   
   // Manual Input State
   const [newItem, setNewItem] = useState<{name: string, quantity: string, rate: string}>({
@@ -141,7 +144,7 @@ const App: React.FC = () => {
     const incompleteItems: BillItem[] = [];
 
     parsedDataList.forEach((p, idx) => {
-      const rate = p.rate || 0;
+      const rate = includePriceInVoice ? (p.rate || 0) : 0;
       const qtyNum = parseQuantityNumber(p.quantity);
       const itemKey = `${p.name || ''}-${p.quantity || ''}-${rate}`;
       
@@ -154,8 +157,9 @@ const App: React.FC = () => {
         isLive: true
       };
 
-      // An item is "complete" if it has a rate > 0
-      if (rate > 0 && p.name) {
+      // An item is "complete" if it has a name and quantity, and optionally rate if price is enabled
+      const isComplete = p.name && p.quantity && (includePriceInVoice ? rate > 0 : true);
+      if (isComplete) {
         // Check if we already auto-committed this item
         if (!autoCommittedRef.current.has(itemKey)) {
           completedItems.push(billItem);
@@ -203,9 +207,16 @@ const App: React.FC = () => {
       }
       setLiveItems([]);
     }
+    
+    // Show edit interface after voice input completes
+    if (allItems.length > 0) {
+      setEditingItems([...allItems]);
+      setShowEditInterface(true);
+    }
+    
     // Reset auto-commit tracking for next voice session
     autoCommittedRef.current.clear();
-  }, [liveItems]);
+  }, [liveItems, allItems]);
 
   const handleManualAdd = () => {
     if (!newItem.name) return;
@@ -294,13 +305,54 @@ const App: React.FC = () => {
         ? `${lastItem.name} கிடைத்தது. அளவு சொல்லுங்கள்...` 
         : `Got ${lastItem.name}. Say Quantity...`;
     }
-    if (!lastItem.rate) {
+    if (includePriceInVoice && !lastItem.rate) {
+      return language === 'ta' 
+        ? `${lastItem.quantity} கிடைத்தது. விலை சொல்லுங்கள்...` 
+        : `Got ${lastItem.quantity}. Say Rate...`;
+    }
+    if (!includePriceInVoice) {
+      return language === 'ta' ? "அடுத்த பொருள் சொல்லுங்கள்..." : "Say next item...";
+    }
+    
+    if (includePriceInVoice && !lastItem.rate) {
       return language === 'ta' 
         ? `${lastItem.quantity} கிடைத்தது. விலை சொல்லுங்கள்...` 
         : `Got ${lastItem.quantity}. Say Rate...`;
     }
     
-    return language === 'ta' ? "விலை சொல்லி முடிக்கவும்..." : "Say Rate to finish row...";
+    return language === 'ta' ? "அடுத்த பொருள் சொல்லுங்கள்..." : "Say next item...";
+  };
+
+  // Edit interface handlers
+  const handleEditItem = (index: number, field: 'name' | 'quantity' | 'rate', value: string) => {
+    setEditingItems(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      
+      // Recalculate total
+      if (field === 'quantity' || field === 'rate') {
+        const rate = field === 'rate' ? parseFloat(value) || 0 : updated[index].rate;
+        const qty = parseQuantityNumber(field === 'quantity' ? value : updated[index].quantity);
+        updated[index].total = rate * qty;
+      }
+      
+      return updated;
+    });
+  };
+
+  const handleSaveEdits = () => {
+    setConfirmedItems(editingItems.filter(item => item.name.trim()));
+    setLiveItems([]);
+    setShowEditInterface(false);
+  };
+
+  const handleCancelEdits = () => {
+    setEditingItems([]);
+    setShowEditInterface(false);
+  };
+
+  const handleRemoveEditItem = (index: number) => {
+    setEditingItems(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -380,6 +432,29 @@ const App: React.FC = () => {
             setIsListening={setIsListening}
             hintText={t.micHint}
           />
+
+          {/* Voice Settings */}
+          <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <i className="fas fa-cog text-gray-400"></i>
+                <span className="text-sm font-medium text-gray-700">
+                  {language === 'ta' ? 'குரல் அமைப்புகள்' : 'Voice Settings'}
+                </span>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includePriceInVoice}
+                  onChange={(e) => setIncludePriceInVoice(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-600">
+                  {language === 'ta' ? 'குரலில் விலை சேர்க்கவும்' : 'Include Price in Voice'}
+                </span>
+              </label>
+            </div>
+          </div>
 
           {/* Billing Table - Enhanced */}
           <div className="p-0 overflow-x-auto relative">
@@ -643,6 +718,138 @@ const App: React.FC = () => {
             </div>
         )}
       </main>
+
+      {/* Edit Interface Modal */}
+      {showEditInterface && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <i className="fas fa-edit text-blue-600"></i>
+                <h3 className="text-lg font-bold text-gray-800">
+                  {language === 'ta' ? 'பொருட்களை திருத்தவும்' : 'Edit Items'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleCancelEdits}
+                className="text-gray-400 hover:text-gray-600 text-xl"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-96">
+              <div className="space-y-4">
+                {editingItems.map((item, index) => (
+                  <div key={index} className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                    <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium text-blue-600">
+                      {index + 1}
+                    </span>
+                    
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          {language === 'ta' ? 'பொருள்' : 'Item'}
+                        </label>
+                        <input
+                          type="text"
+                          value={item.name}
+                          onChange={(e) => handleEditItem(index, 'name', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder={language === 'ta' ? 'பொருளின் பெயர்' : 'Item name'}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          {language === 'ta' ? 'அளவு' : 'Quantity'}
+                        </label>
+                        <input
+                          type="text"
+                          value={item.quantity}
+                          onChange={(e) => handleEditItem(index, 'quantity', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder={language === 'ta' ? 'அளவு' : 'Quantity'}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          {language === 'ta' ? 'விலை (₹)' : 'Rate (₹)'}
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={item.rate}
+                          onChange={(e) => handleEditItem(index, 'rate', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 mb-1">
+                        {language === 'ta' ? 'மொத்தம்' : 'Total'}
+                      </div>
+                      <div className="font-bold text-emerald-600">
+                        ₹{item.total.toFixed(2)}
+                      </div>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveEditItem(index)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                      title={language === 'ta' ? 'அழிக்கவும்' : 'Remove'}
+                    >
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  </div>
+                ))}
+                
+                {editingItems.length === 0 && (
+                  <div className="text-center py-8">
+                    <i className="fas fa-inbox text-4xl text-gray-300 mb-3"></i>
+                    <p className="text-gray-500">
+                      {language === 'ta' ? 'திருத்த பொருட்கள் இல்லை' : 'No items to edit'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center p-6 border-t border-gray-200 bg-gray-50">
+              <div className="text-sm text-gray-600">
+                <span className="font-medium">
+                  {language === 'ta' ? 'மொத்தம்:' : 'Total:'} 
+                </span>
+                <span className="ml-2 text-lg font-bold text-emerald-600">
+                  ₹{editingItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
+                </span>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancelEdits}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  {language === 'ta' ? 'रद्द' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEdits}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  {language === 'ta' ? 'சேமிக्क' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
