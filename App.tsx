@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Language, BillItem, UserDetails } from './types';
 import { TRANSLATIONS } from './constants';
 import { parseContinuousInput } from './services/voiceParser';
-import { generatePDF } from './services/pdfGenerator';
+import { generatePDFWithTamilSupport } from './services/pdfGeneratorV2';
 import VoiceControls from './components/VoiceControls';
 import CustomerForm from './components/CustomerForm';
 
@@ -100,11 +100,15 @@ const App: React.FC = () => {
     setLanguage(prev => prev === 'en' ? 'ta' : 'en');
   };
 
+  // Track which items have been auto-committed during this voice session
+  const autoCommittedRef = useRef<Set<string>>(new Set());
+
   // Central helper to clear everything (usable by UI + voice commands)
   const clearAllItems = () => {
     setConfirmedItems([]);
     setLiveItems([]);
     setNewItem({ name: '', quantity: '', rate: '' });
+    autoCommittedRef.current.clear();
   };
 
   // Called repeatedly as the user speaks
@@ -125,43 +129,82 @@ const App: React.FC = () => {
         setConfirmedItems(prev => prev.filter((_, idx) => idx !== command.index - 1));
       }
       setLiveItems([]);
+      autoCommittedRef.current.clear();
       return;
     }
 
     // Parse the entire streaming transcript
     const parsedDataList = parseContinuousInput(transcript);
 
-    // Convert parsed data to BillItems
-    const tempItems: BillItem[] = parsedDataList.map((p, idx) => {
-        const rate = p.rate || 0;
-        const qtyNum = parseQuantityNumber(p.quantity);
-        return {
-          id: `live-${idx}`, // Stable ID for live items based on index
-          name: p.name || '',
-          quantity: p.quantity || '',
-          rate: rate,
-          total: rate * qtyNum,
-          isLive: true
-        };
+    // Separate completed items (with rate) from incomplete items (no rate yet)
+    const completedItems: BillItem[] = [];
+    const incompleteItems: BillItem[] = [];
+
+    parsedDataList.forEach((p, idx) => {
+      const rate = p.rate || 0;
+      const qtyNum = parseQuantityNumber(p.quantity);
+      const itemKey = `${p.name || ''}-${p.quantity || ''}-${rate}`;
+      
+      const billItem: BillItem = {
+        id: `live-${idx}`,
+        name: p.name || '',
+        quantity: p.quantity || '',
+        rate: rate,
+        total: rate * qtyNum,
+        isLive: true
+      };
+
+      // An item is "complete" if it has a rate > 0
+      if (rate > 0 && p.name) {
+        // Check if we already auto-committed this item
+        if (!autoCommittedRef.current.has(itemKey)) {
+          completedItems.push(billItem);
+          autoCommittedRef.current.add(itemKey);
+        }
+        // Already committed items are not shown in live
+      } else {
+        // Incomplete item - show in live section
+        incompleteItems.push(billItem);
+      }
     });
 
-    setLiveItems(tempItems);
+    // Auto-commit completed items
+    if (completedItems.length > 0) {
+      setConfirmedItems(prev => [
+        ...prev,
+        ...completedItems.map(item => ({
+          ...item,
+          id: uuidv4(),
+          isLive: false,
+          name: item.name || 'Unknown Item',
+        }))
+      ]);
+    }
+
+    // Update live items to show only incomplete ones
+    setLiveItems(incompleteItems);
   }, []);
 
   // Called when user stops speaking
   const handleVoiceListeningEnd = useCallback(() => {
+    // Commit any remaining live items when voice session ends
     if (liveItems.length > 0) {
-      // Commit live items to confirmed list
-      const committedItems = liveItems.map(item => ({
-        ...item,
-        id: uuidv4(), // Final ID
-        isLive: false,
-        name: item.name || 'Unknown Item', // Fallback
-      }));
+      const committedItems = liveItems
+        .filter(item => item.name) // Only commit items with names
+        .map(item => ({
+          ...item,
+          id: uuidv4(),
+          isLive: false,
+          name: item.name || 'Unknown Item',
+        }));
       
-      setConfirmedItems(prev => [...prev, ...committedItems]);
-      setLiveItems([]); // Clear live buffer
+      if (committedItems.length > 0) {
+        setConfirmedItems(prev => [...prev, ...committedItems]);
+      }
+      setLiveItems([]);
     }
+    // Reset auto-commit tracking for next voice session
+    autoCommittedRef.current.clear();
   }, [liveItems]);
 
   const handleManualAdd = () => {
@@ -224,7 +267,8 @@ const App: React.FC = () => {
   const handleDownloadPDF = async () => {
     setIsGeneratingPdf(true);
     try {
-      await generatePDF(allItems, userDetails, grandTotal, language, t);
+      // Use HTML-based PDF generator for proper Tamil Unicode rendering
+      await generatePDFWithTamilSupport(allItems, userDetails, grandTotal, language, t);
     } catch (error) {
       console.error("PDF generation failed:", error);
       alert("Something went wrong while generating the PDF. Please try again.");

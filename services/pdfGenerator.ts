@@ -2,11 +2,14 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { BillItem, UserDetails, Language, Translation } from '../types';
 import { TAMIL_FONT_BASE64 } from './tamilFontBase64';
+import { formalizeTamilForPDF } from './tamilLinguisticEngine';
 
-// Register Tamil font
+// Register Tamil font with proper Unicode support
 const registerTamilFont = (doc: jsPDF): void => {
-  doc.addFileToVFS('NotoSansTamil-Regular.ttf', TAMIL_FONT_BASE64);
-  doc.addFont('NotoSansTamil-Regular.ttf', 'NotoSansTamil', 'normal', 'Identity-H');
+  // Add font file to virtual file system
+  doc.addFileToVFS('MuktaMalar-Regular.ttf', TAMIL_FONT_BASE64);
+  // Register font - MuktaMalar has good Tamil Unicode support
+  doc.addFont('MuktaMalar-Regular.ttf', 'MuktaMalar', 'normal');
 };
 
 export const generatePDF = (
@@ -22,7 +25,7 @@ export const generatePDF = (
   registerTamilFont(doc);
   
   const isTamil = language === 'ta';
-  const fontName = isTamil ? 'NotoSansTamil' : 'helvetica';
+  const fontName = isTamil ? 'MuktaMalar' : 'helvetica';
   
   // Page setup
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -77,11 +80,11 @@ export const generatePDF = (
     ? [['வ.எண்', 'பொருள்', 'அளவு', 'விலை (₹)', 'மொத்தம் (₹)']]
     : [['S.No', 'Item', 'Qty', 'Rate (₹)', 'Total (₹)']];
   
-  // Table body
+  // Table body - Apply Tamil linguistic processing for Tamil language
   const tableBody = items.map((item, index) => [
     (index + 1).toString(),
-    item.name,
-    item.quantity.toString(),
+    isTamil ? formalizeTamilForPDF(item.name) : item.name,
+    isTamil ? formalizeTamilForPDF(item.quantity.toString()) : item.quantity.toString(),
     item.rate.toFixed(2),
     item.total.toFixed(2)
   ]);
@@ -121,7 +124,7 @@ export const generatePDF = (
     didParseCell: (data) => {
       // Force Tamil font for all cells
       if (isTamil) {
-        data.cell.styles.font = 'NotoSansTamil';
+        data.cell.styles.font = 'MuktaMalar';
       }
     },
   });
