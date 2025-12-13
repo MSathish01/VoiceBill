@@ -1,166 +1,166 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { BillItem, UserDetails, Language, Translation } from '../types';
-import { TAMIL_FONT_BASE64 } from './tamilFontBase64';
-import { formalizeTamilForPDF } from './tamilLinguisticEngine';
+import { BillItem, UserDetails, Translation } from '../types';
 
-// Register Tamil font with proper Unicode support
-const registerTamilFont = (doc: jsPDF): void => {
-  // Add font file to virtual file system
-  doc.addFileToVFS('MuktaMalar-Regular.ttf', TAMIL_FONT_BASE64);
-  // Register font - MuktaMalar has good Tamil Unicode support
-  doc.addFont('MuktaMalar-Regular.ttf', 'MuktaMalar', 'normal');
+// Robust list of CDNs for Noto Sans Tamil
+const FONT_URLS = [
+  // jsDelivr - High availability CDN
+  'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosanstamil/NotoSansTamil-Regular.ttf',
+  // GitHub Raw - Direct source
+  'https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstamil/NotoSansTamil-Regular.ttf',
+  // Unpkg - Another reliable mirror
+  'https://www.unpkg.com/@fontsource/noto-sans-tamil/files/noto-sans-tamil-tamil-400-normal.woff'
+];
+
+/**
+ * Fetches the Tamil font as a Base64 string from available CDNs.
+ */
+const fetchFontBase64 = async (): Promise<string | null> => {
+  for (const url of FONT_URLS) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const blob = await response.blob();
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = reader.result as string;
+            // Strip the Data URI prefix to get raw Base64
+            // e.g., "data:font/ttf;base64,AAEAAA..." -> "AAEAAA..."
+            const base64 = result.split(',')[1];
+            if (base64) resolve(base64);
+            else reject('Invalid base64 conversion');
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+    } catch (error) {
+      console.warn(`Attempt to load font from ${url} failed. Trying next...`);
+    }
+  }
+  return null;
 };
 
-export const generatePDF = (
+export const generatePDF = async (
   items: BillItem[],
-  customer: UserDetails,
-  grandTotal: number,
-  language: Language,
-  t: Translation
-): void => {
+  userDetails: UserDetails,
+  t: Translation,
+  grandTotal: number
+) => {
   const doc = new jsPDF();
-  
-  // Register and set Tamil font
-  registerTamilFont(doc);
-  
-  const isTamil = language === 'ta';
-  const fontName = isTamil ? 'MuktaMalar' : 'helvetica';
-  
-  // Page setup
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 15;
-  
-  // Colors
-  const primaryColor: [number, number, number] = [0, 128, 128]; // Teal
-  const darkColor: [number, number, number] = [33, 37, 41];
-  const lightGray: [number, number, number] = [248, 249, 250];
-  
-  // ===== HEADER =====
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, pageWidth, 35, 'F');
-  
-  doc.setFont(fontName, 'normal');
+  const fontFileName = 'NotoSansTamil-Regular.ttf';
+  const fontName = 'NotoSansTamil';
+  let isFontLoaded = false;
+
+  try {
+    const base64Font = await fetchFontBase64();
+    if (base64Font) {
+      // 1. Add file to Virtual File System
+      doc.addFileToVFS(fontFileName, base64Font);
+      // 2. Register font (setup alias)
+      doc.addFont(fontFileName, fontName, 'normal');
+      // 3. Set as active font
+      doc.setFont(fontName);
+      isFontLoaded = true;
+    } else {
+      console.error("Failed to load Tamil font. PDF will use default font (Tamil characters may not render).");
+    }
+  } catch (err) {
+    console.error("Error embedding font:", err);
+  }
+
+  const activeFont = isFontLoaded ? fontName : 'helvetica';
+
+  // --- Header ---
+  doc.setFont(activeFont); // Ensure font is set before writing text
   doc.setFontSize(22);
-  doc.setTextColor(255, 255, 255);
-  const title = isTamil ? 'தினசரி வீட்டு பில்' : 'Daily Home Bill';
-  doc.text(title, pageWidth / 2, 20, { align: 'center' });
-  
-  // Date
+  doc.setTextColor(40);
+  doc.text(t.title, 14, 20);
+
   doc.setFontSize(10);
-  const today = new Date();
-  const dateStr = today.toLocaleDateString(isTamil ? 'ta-IN' : 'en-IN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+  doc.setTextColor(100);
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 28);
+
+  // --- User Details ---
+  doc.setFontSize(12);
+  doc.setTextColor(0);
+  doc.text(t.userDetails, 14, 40);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(80);
+  let yPos = 46;
+  if (userDetails.name) {
+    doc.text(`${userDetails.name}`, 14, yPos);
+    yPos += 6;
+  }
+  if (userDetails.address) {
+    doc.text(`${userDetails.address}`, 14, yPos);
+    yPos += 6;
+  }
+  if (userDetails.mobile) {
+    doc.text(`${userDetails.mobile}`, 14, yPos);
+    yPos += 6;
+  }
+  if (userDetails.email) {
+    doc.text(`${userDetails.email}`, 14, yPos);
+  }
+
+  // --- Table ---
+  const tableColumn = [t.slNo, t.item, t.quantity, t.rate, t.total];
+  const tableRows: any[] = [];
+
+  items.forEach((item, index) => {
+    const itemData = [
+      index + 1,
+      item.name,
+      item.quantity,
+      item.rate.toFixed(2),
+      item.total.toFixed(2),
+    ];
+    tableRows.push(itemData);
   });
-  doc.text(dateStr, pageWidth / 2, 30, { align: 'center' });
-  
-  // ===== CUSTOMER INFO =====
-  let yPos = 50;
-  
-  doc.setFillColor(...lightGray);
-  doc.roundedRect(margin, yPos - 5, pageWidth - 2 * margin, 30, 3, 3, 'F');
-  
-  doc.setFont(fontName, 'normal');
-  doc.setFontSize(11);
-  doc.setTextColor(...darkColor);
-  
-  const nameLabel = isTamil ? 'வாடிக்கையாளர்' : 'Customer';
-  const phoneLabel = isTamil ? 'தொலைபேசி' : 'Mobile';
-  
-  doc.text(`${nameLabel}: ${customer.name || '-'}`, margin + 5, yPos + 8);
-  doc.text(`${phoneLabel}: ${customer.mobile || '-'}`, margin + 5, yPos + 18);
-  
-  // ===== ITEMS TABLE =====
-  yPos = 95;
-  
-  // Table headers - use Tamil text directly
-  const headers = isTamil 
-    ? [['வ.எண்', 'பொருள்', 'அளவு', 'விலை (₹)', 'மொத்தம் (₹)']]
-    : [['S.No', 'Item', 'Qty', 'Rate (₹)', 'Total (₹)']];
-  
-  // Table body - Apply Tamil linguistic processing for Tamil language
-  const tableBody = items.map((item, index) => [
-    (index + 1).toString(),
-    isTamil ? formalizeTamilForPDF(item.name) : item.name,
-    isTamil ? formalizeTamilForPDF(item.quantity.toString()) : item.quantity.toString(),
-    item.rate.toFixed(2),
-    item.total.toFixed(2)
+
+  // Footer Row
+  tableRows.push([
+    '', 
+    '', 
+    '', 
+    { content: t.grandTotal, styles: { fontStyle: 'bold', font: activeFont } }, 
+    { content: `Rs. ${grandTotal.toFixed(2)}`, styles: { fontStyle: 'bold', font: activeFont } }
   ]);
 
   autoTable(doc, {
-    startY: yPos,
-    head: headers,
-    body: tableBody,
+    head: [tableColumn],
+    body: tableRows,
+    startY: 75,
     theme: 'grid',
     styles: {
-      font: fontName,
+      font: activeFont, // Apply to ALL cells
       fontSize: 10,
-      cellPadding: 5,
-      lineColor: [200, 200, 200],
-      lineWidth: 0.5,
+      cellPadding: 3,
+      overflow: 'linebreak'
     },
     headStyles: {
-      font: fontName,
-      fillColor: primaryColor,
-      textColor: [255, 255, 255],
-      fontSize: 10,
-      fontStyle: 'normal',
-      halign: 'center',
-    },
-    bodyStyles: {
-      font: fontName,
-      textColor: darkColor,
+      fillColor: [59, 130, 246], // Blue
+      textColor: 255,
+      font: activeFont,
+      fontStyle: 'normal'
     },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 20 },
-      1: { halign: 'left', cellWidth: 60 },
-      2: { halign: 'center', cellWidth: 25 },
-      3: { halign: 'right', cellWidth: 35 },
-      4: { halign: 'right', cellWidth: 35 },
-    },
-    margin: { left: margin, right: margin },
-    didParseCell: (data) => {
-      // Force Tamil font for all cells
-      if (isTamil) {
-        data.cell.styles.font = 'MuktaMalar';
-      }
+      0: { cellWidth: 20 },
+      1: { cellWidth: 'auto' },
+      2: { cellWidth: 30 },
+      3: { cellWidth: 30, halign: 'right' },
+      4: { cellWidth: 35, halign: 'right' },
     },
   });
 
-  // Get final Y position after table
-  const finalY = (doc as any).lastAutoTable?.finalY || yPos + 50;
-  
-  // ===== GRAND TOTAL =====
-  yPos = finalY + 15;
-  
-  doc.setFillColor(...primaryColor);
-  doc.roundedRect(pageWidth - margin - 80, yPos - 5, 80, 20, 3, 3, 'F');
-  
-  doc.setFont(fontName, 'normal');
-  doc.setFontSize(12);
-  doc.setTextColor(255, 255, 255);
-  
-  const totalLabel = isTamil ? 'மொத்தம்' : 'Total';
-  doc.text(`${totalLabel}: ₹${grandTotal.toFixed(2)}`, pageWidth - margin - 75, yPos + 7);
-  
-  // ===== FOOTER =====
-  const pageHeight = doc.internal.pageSize.getHeight();
-  
-  doc.setFillColor(...lightGray);
-  doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
-  
-  doc.setFont(fontName, 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  
-  const footerText = isTamil 
-    ? 'VoiceBill மூலம் உருவாக்கப்பட்டது | நன்றி!'
-    : 'Generated by VoiceBill | Thank you!';
-  doc.text(footerText, pageWidth / 2, pageHeight - 8, { align: 'center' });
-  
-  // ===== SAVE PDF =====
-  const fileName = `bill_${customer.name || 'customer'}_${today.toISOString().split('T')[0]}.pdf`;
-  doc.save(fileName);
+  // --- Footer ---
+  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  doc.setFontSize(10);
+  doc.setTextColor(150);
+  doc.text("Generated by VoiceBill App", 14, finalY);
+
+  doc.save(`Bill_${new Date().getTime()}.pdf`);
 };

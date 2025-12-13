@@ -4,18 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VoiceBill App</title>
-    <!-- Google Fonts - Tamil fonts for proper Unicode rendering -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700&family=Mukta+Malar:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-      /* Tamil font stack for proper rendering */
-      .tamil-text, [lang="ta"] {
-        font-family: 'Noto Sans Tamil', 'Mukta Malar', 'Latha', 'Vijaya', sans-serif !important;
-      }
-    </style>
     <script>
       tailwind.config = {
         theme: {
@@ -28,7 +18,6 @@
             },
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
-              tamil: ['Noto Sans Tamil', 'Mukta Malar', 'Latha', 'Vijaya', 'sans-serif'],
             },
             keyframes: {
               'fade-in-down': {
@@ -71,9 +60,20 @@
         backdrop-filter: blur(10px);
       }
     </style>
+  <script type="importmap">
+{
+  "imports": {
+    "jspdf": "https://aistudiocdn.com/jspdf@^3.0.4",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "jspdf-autotable": "https://aistudiocdn.com/jspdf-autotable@^5.0.2"
+  }
+}
+</script>
 </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
