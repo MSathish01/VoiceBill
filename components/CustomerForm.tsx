@@ -20,6 +20,20 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ details, onChange, t }) => 
         {t.userDetails}
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              <i className="fas fa-heading mr-1 text-amber-500"></i>
+              {t.pdfTitlePlaceholder}
+            </label>
+            <input
+            type="text"
+            name="pdfTitle"
+            value={details.pdfTitle}
+            onChange={handleChange}
+            placeholder={t.pdfTitlePlaceholder}
+            className="w-full p-2.5 border border-amber-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm bg-amber-50"
+            />
+        </div>
         <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">{t.namePlaceholder}</label>
             <input

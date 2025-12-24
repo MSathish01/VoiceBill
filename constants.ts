@@ -18,6 +18,7 @@ export const TRANSLATIONS: Record<Language, Translation> = {
     addressPlaceholder: "Address",
     mobilePlaceholder: "Mobile Number",
     emailPlaceholder: "Email (Optional)",
+    pdfTitlePlaceholder: "PDF Title (Optional)",
     delete: "Delete",
     clearAll: "Clear List"
   },
@@ -38,6 +39,7 @@ export const TRANSLATIONS: Record<Language, Translation> = {
     addressPlaceholder: "முகவரி",
     mobilePlaceholder: "கைபேசி எண்",
     emailPlaceholder: "மின்னஞ்சல் (விருப்பத் தேர்வு)",
+    pdfTitlePlaceholder: "PDF தலைப்பு (விருப்பத் தேர்வு)",
     delete: "நீக்கு",
     clearAll: "அழி"
   }

@@ -58,7 +58,8 @@ const App: React.FC = () => {
     name: '',
     address: '',
     mobile: '',
-    email: ''
+    email: '',
+    pdfTitle: ''
   });
   const [isListening, setIsListening] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -359,23 +360,23 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-sky-50 to-white font-sans text-gray-800 pb-20">
       
       {/* Header & Language Toggle - Enhanced */}
-      <header className="bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 shadow-lg sticky top-0 z-20">
+      <header className="bg-white shadow-lg sticky top-0 z-20 border-b-4 border-cyan-500">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-white flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+          <h1 className="text-xl font-bold text-slate-800 flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-green-500 rounded-xl flex items-center justify-center">
               <i className="fas fa-file-invoice-dollar text-white"></i>
             </div>
-            <span className="drop-shadow-sm">{t.title}</span>
+            <span>{t.title}</span>
           </h1>
           
           <button 
             type="button"
             onClick={handleLanguageToggle}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm transition-all text-sm font-medium border border-white/30 text-white shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-all text-sm font-medium border border-slate-200 text-slate-700 shadow-sm"
           >
-            <span className={`transition-all ${language === 'en' ? 'font-bold scale-105' : 'opacity-70'}`}>ENG</span>
-            <span className="opacity-50">|</span>
-            <span className={`transition-all ${language === 'ta' ? 'font-bold scale-105' : 'opacity-70'}`}>தமிழ்</span>
+            <span className={`transition-all ${language === 'en' ? 'font-bold text-cyan-600 scale-105' : 'text-slate-500'}`}>ENG</span>
+            <span className="text-slate-300">|</span>
+            <span className={`transition-all ${language === 'ta' ? 'font-bold text-cyan-600 scale-105' : 'text-slate-500'}`}>தமிழ்</span>
           </button>
         </div>
       </header>
@@ -387,8 +388,8 @@ const App: React.FC = () => {
           <div className="bg-white shadow-md border border-gray-100 rounded-xl p-5 flex flex-col gap-2 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase tracking-wide text-gray-500 font-medium">Items</span>
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i className="fas fa-shopping-basket text-blue-600 text-sm"></i>
+              <div className="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
+                <i className="fas fa-shopping-basket text-cyan-600 text-sm"></i>
               </div>
             </div>
             <span className="text-3xl font-bold text-gray-800">{allItems.length}</span>
@@ -397,16 +398,16 @@ const App: React.FC = () => {
           <div className="bg-white shadow-md border border-gray-100 rounded-xl p-5 flex flex-col gap-2 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase tracking-wide text-gray-500 font-medium">Grand Total</span>
-              <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-                <i className="fas fa-rupee-sign text-emerald-600 text-sm"></i>
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <i className="fas fa-rupee-sign text-green-600 text-sm"></i>
               </div>
             </div>
-            <span className="text-3xl font-bold text-emerald-600">₹{grandTotal.toFixed(2)}</span>
+            <span className="text-3xl font-bold text-green-500">₹{grandTotal.toFixed(2)}</span>
             <span className="text-xs text-gray-400">Updated in real-time</span>
           </div>
-          <div className="bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 text-white rounded-xl p-5 shadow-lg flex flex-col justify-between hover:shadow-xl transition-shadow">
+          <div className="bg-gradient-to-br from-cyan-500 to-green-500 text-white rounded-xl p-5 shadow-lg flex flex-col justify-between hover:shadow-xl transition-shadow">
             <div className="flex items-center gap-2">
-              <i className="fas fa-wand-magic-sparkles text-purple-200"></i>
+              <i className="fas fa-wand-magic-sparkles text-white/80"></i>
               <span className="text-sm font-semibold">Quick Demo</span>
             </div>
             <button
@@ -447,7 +448,7 @@ const App: React.FC = () => {
                   type="checkbox"
                   checked={includePriceInVoice}
                   onChange={(e) => setIncludePriceInVoice(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                  className="w-4 h-4 text-cyan-500 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500"
                 />
                 <span className="text-sm text-gray-600">
                   {language === 'ta' ? 'குரலில் விலை சேர்க்கவும்' : 'Include Price in Voice'}
@@ -490,7 +491,7 @@ const App: React.FC = () => {
                     key={item.id} 
                     className={`transition-all duration-300 animate-fade-in-up group ${
                       item.isLive 
-                        ? 'bg-blue-50/80 border-l-4 border-blue-500 shadow-inner' 
+                        ? 'bg-cyan-50/80 border-l-4 border-cyan-500 shadow-inner' 
                         : 'hover:bg-gray-50'
                     }`}
                   >
@@ -625,15 +626,15 @@ const App: React.FC = () => {
            {/* Grand Total Footer - Enhanced */}
            <div className="bg-gradient-to-r from-gray-100 to-gray-50 p-5 border-t-2 border-gray-200 flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                  <i className="fas fa-calculator text-emerald-600"></i>
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <i className="fas fa-calculator text-green-600"></i>
                 </div>
                 <span className="font-bold text-gray-700 uppercase text-sm tracking-wide">
                   {t.grandTotal}
                 </span>
               </div>
               <div className="text-right">
-                <span className="font-black text-3xl bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
+                <span className="font-black text-3xl bg-gradient-to-r from-cyan-500 to-green-500 bg-clip-text text-transparent">
                   ₹{grandTotal.toFixed(2)}
                 </span>
               </div>
@@ -673,7 +674,7 @@ const App: React.FC = () => {
                 className={`flex items-center gap-3 px-8 py-3.5 rounded-xl font-bold shadow-lg transition-all transform ${
                   allItems.length === 0 || isGeneratingPdf
                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed scale-100'
-                    : 'bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 hover:scale-105 hover:shadow-xl active:scale-95'
+                    : 'bg-gradient-to-r from-cyan-500 to-green-500 text-white hover:from-cyan-600 hover:to-green-600 hover:scale-105 hover:shadow-xl active:scale-95'
                 }`}
               >
                 {isGeneratingPdf ? (
@@ -695,7 +696,7 @@ const App: React.FC = () => {
         
         {/* Helper Footer for Voice - Dynamic Status Bar - Enhanced */}
         {isListening && (
-            <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-indigo-600 border-t-4 border-blue-400 p-4 shadow-2xl z-30 animate-fade-in-up">
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-cyan-500 p-4 shadow-2xl z-30 animate-fade-in-up">
                 <div className="max-w-3xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
                          <div className="relative">

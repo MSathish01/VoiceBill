@@ -87,7 +87,7 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
         className={`relative w-20 h-20 rounded-full flex items-center justify-center text-3xl transition-all duration-300 shadow-lg ${
           isListening
             ? 'bg-red-500 text-white animate-pulse ring-4 ring-red-200'
-            : 'bg-primary text-white hover:bg-blue-600 ring-4 ring-blue-100'
+            : 'bg-gradient-to-r from-cyan-500 to-cyan-400 text-white hover:from-cyan-600 hover:to-cyan-500 ring-4 ring-cyan-100'
         }`}
       >
         <i className={`fas ${isListening ? 'fa-stop' : 'fa-microphone'}`}></i>
@@ -106,11 +106,11 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
       
       {/* Live Transcript Display */}
       {isListening && liveTranscript && (
-        <div className="mt-3 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg max-w-md mx-4">
-          <p className="text-xs text-blue-500 font-medium mb-1">
+        <div className="mt-3 px-4 py-2 bg-cyan-50 border border-cyan-200 rounded-lg max-w-md mx-4">
+          <p className="text-xs text-cyan-600 font-medium mb-1">
             {language === 'ta' ? '🎤 கேட்ட உரை:' : '🎤 Heard:'}
           </p>
-          <p className="text-sm text-blue-800 font-medium break-words leading-relaxed">
+          <p className="text-sm text-cyan-800 font-medium break-words leading-relaxed">
             {liveTranscript}
           </p>
         </div>

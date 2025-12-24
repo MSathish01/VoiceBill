@@ -14,6 +14,7 @@ export interface UserDetails {
   address: string;
   mobile: string;
   email: string;
+  pdfTitle: string;
 }
 
 export interface ParsedVoiceData {
@@ -39,6 +40,7 @@ export interface Translation {
   addressPlaceholder: string;
   mobilePlaceholder: string;
   emailPlaceholder: string;
+  pdfTitlePlaceholder: string;
   delete: string;
   clearAll: string;
 }
