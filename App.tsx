@@ -71,6 +71,12 @@ const App: React.FC = () => {
   const [newItem, setNewItem] = useState<{name: string, quantity: string, rate: string}>({
     name: '', quantity: '', rate: ''
   });
+  
+  // Inline Edit State - tracks which item is being edited
+  const [inlineEditId, setInlineEditId] = useState<string | null>(null);
+  const [inlineEditValues, setInlineEditValues] = useState<{name: string, quantity: string, rate: string}>({
+    name: '', quantity: '', rate: ''
+  });
 
   // Refs
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -158,8 +164,9 @@ const App: React.FC = () => {
         isLive: true
       };
 
-      // An item is "complete" if it has a name and quantity, and optionally rate if price is enabled
-      const isComplete = p.name && p.quantity && (includePriceInVoice ? rate > 0 : true);
+      // An item is "complete" if it has a name and quantity
+      // Rate can be added/edited later manually
+      const isComplete = p.name && p.quantity;
       if (isComplete) {
         // Check if we already auto-committed this item
         if (!autoCommittedRef.current.has(itemKey)) {
@@ -168,7 +175,7 @@ const App: React.FC = () => {
         }
         // Already committed items are not shown in live
       } else {
-        // Incomplete item - show in live section
+        // Incomplete item (no name or no quantity) - show in live section
         incompleteItems.push(billItem);
       }
     });
@@ -356,6 +363,59 @@ const App: React.FC = () => {
     setEditingItems(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Inline edit handlers
+  const startInlineEdit = (item: BillItem, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    // Only allow editing confirmed items (not live)
+    if (item.isLive) return;
+    
+    setInlineEditId(item.id);
+    setInlineEditValues({
+      name: item.name,
+      quantity: item.quantity,
+      rate: item.rate.toString()
+    });
+  };
+
+  const saveInlineEdit = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!inlineEditId) return;
+    
+    const rateVal = parseFloat(inlineEditValues.rate) || 0;
+    const qtyNum = parseQuantityNumber(inlineEditValues.quantity || '1');
+    
+    setConfirmedItems(prev => prev.map(item => {
+      if (item.id === inlineEditId) {
+        return {
+          ...item,
+          name: inlineEditValues.name.trim() || item.name,
+          quantity: inlineEditValues.quantity.trim() || item.quantity,
+          rate: rateVal,
+          total: rateVal * qtyNum
+        };
+      }
+      return item;
+    }));
+    
+    setInlineEditId(null);
+    setInlineEditValues({ name: '', quantity: '', rate: '' });
+  };
+
+  const cancelInlineEdit = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    setInlineEditId(null);
+    setInlineEditValues({ name: '', quantity: '', rate: '' });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-sky-50 to-white font-sans text-gray-800 pb-20">
       
@@ -492,14 +552,24 @@ const App: React.FC = () => {
                     className={`transition-all duration-300 animate-fade-in-up group ${
                       item.isLive 
                         ? 'bg-cyan-50/80 border-l-4 border-cyan-500 shadow-inner' 
-                        : 'hover:bg-gray-50'
+                        : inlineEditId === item.id 
+                          ? 'bg-amber-50 border-l-4 border-amber-500'
+                          : 'hover:bg-gray-50'
                     }`}
                   >
                     <td className="p-4 text-center text-gray-500 text-sm">{index + 1}</td>
                     
-                    {/* Item Name Cell - Enhanced for Tamil */}
+                    {/* Item Name Cell - Inline Edit Mode */}
                     <td className="p-4 font-medium text-gray-800">
-                      {item.isLive && !item.name ? (
+                      {inlineEditId === item.id ? (
+                        <input
+                          type="text"
+                          value={inlineEditValues.name}
+                          onChange={(e) => setInlineEditValues(prev => ({...prev, name: e.target.value}))}
+                          className="w-full bg-white border-2 border-amber-400 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          autoFocus
+                        />
+                      ) : item.isLive && !item.name ? (
                          <span className="text-blue-400 italic text-sm animate-pulse flex items-center gap-2">
                            <i className="fas fa-comment-dots"></i> 
                            {language === 'ta' ? 'பொருள் சொல்லுங்கள்...' : 'Say Item...'}
@@ -509,43 +579,88 @@ const App: React.FC = () => {
                       )}
                     </td>
 
-                    {/* Quantity Cell - Enhanced */}
+                    {/* Quantity Cell - Inline Edit Mode */}
                     <td className="p-4 text-center">
-                       {item.isLive && !item.quantity ? (
+                      {inlineEditId === item.id ? (
+                        <input
+                          type="text"
+                          value={inlineEditValues.quantity}
+                          onChange={(e) => setInlineEditValues(prev => ({...prev, quantity: e.target.value}))}
+                          className="w-full bg-white border-2 border-amber-400 rounded px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      ) : item.isLive && !item.quantity ? (
                          item.name ? <span className="text-blue-400 italic text-xs animate-pulse">{language === 'ta' ? 'அளவு...' : 'Qty...'}</span> : <span className="text-gray-300">—</span>
                        ) : (
                          <span className="inline-flex items-center px-2.5 py-1 bg-gray-100 rounded-md text-gray-700 text-sm font-medium">{item.quantity}</span>
                        )}
                     </td>
 
-                    {/* Total Cell - Shows item total (rate × quantity) */}
+                    {/* Rate/Total Cell - Inline Edit Mode */}
                     <td className="p-4 text-right">
-                        {item.isLive && item.rate === 0 ? (
+                      {inlineEditId === item.id ? (
+                        <input
+                          type="number"
+                          value={inlineEditValues.rate}
+                          onChange={(e) => setInlineEditValues(prev => ({...prev, rate: e.target.value}))}
+                          onKeyDown={(e) => e.key === 'Enter' && saveInlineEdit()}
+                          className="w-full bg-white border-2 border-amber-400 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          placeholder="Rate ₹"
+                        />
+                      ) : item.isLive && item.rate === 0 ? (
                            (item.quantity || item.name) ? <span className="text-blue-400 italic text-xs animate-pulse">{language === 'ta' ? 'விலை...' : 'Rate...'}</span> : <span className="text-gray-300">—</span>
                         ) : (
                             <span className="font-bold text-emerald-600">₹{item.total.toFixed(2)}</span>
                         )}
                     </td>
 
-                    {/* Delete Action - Always Visible for Confirmed Items */}
+                    {/* Actions - Edit & Delete */}
                     <td className="p-4 text-center">
-                      {item.isLive === true ? (
+                      {item.isLive === true && (!item.name || !item.quantity) ? (
                         <span className="inline-flex items-center justify-center w-9 h-9 text-blue-400">
                           <i className="fas fa-circle-notch fa-spin text-sm"></i>
                         </span>
+                      ) : inlineEditId === item.id ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <button 
+                            type="button"
+                            onClick={(e) => saveInlineEdit(e)}
+                            className="bg-green-500 hover:bg-green-600 text-white transition-all duration-200 w-9 h-9 rounded-full flex items-center justify-center shadow-md cursor-pointer hover:shadow-lg hover:scale-110 active:scale-95"
+                            title={language === 'ta' ? 'சேமி' : 'Save'}
+                          >
+                            <i className="fas fa-check text-sm pointer-events-none"></i>
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={(e) => cancelInlineEdit(e)}
+                            className="bg-gray-400 hover:bg-gray-500 text-white transition-all duration-200 w-9 h-9 rounded-full flex items-center justify-center shadow-md cursor-pointer hover:shadow-lg hover:scale-110 active:scale-95"
+                            title={language === 'ta' ? 'ரத்து' : 'Cancel'}
+                          >
+                            <i className="fas fa-times text-sm pointer-events-none"></i>
+                          </button>
+                        </div>
                       ) : (
-                        <button 
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            setConfirmedItems(prev => prev.filter(i => i.id !== item.id));
-                          }}
-                          className="bg-red-50 border-2 border-red-300 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 w-10 h-10 rounded-full flex items-center justify-center shadow-md cursor-pointer mx-auto hover:shadow-lg hover:scale-110 active:scale-95"
-                          title={language === 'ta' ? 'நீக்கு' : 'Delete this item'}
-                        >
-                          <i className="fas fa-trash-alt text-sm pointer-events-none"></i>
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button 
+                            type="button"
+                            onClick={(e) => startInlineEdit(item, e)}
+                            className="bg-amber-50 border-2 border-amber-300 text-amber-500 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all duration-200 w-9 h-9 rounded-full flex items-center justify-center shadow-md cursor-pointer hover:shadow-lg hover:scale-110 active:scale-95"
+                            title={language === 'ta' ? 'திருத்து' : 'Edit this item'}
+                          >
+                            <i className="fas fa-pencil-alt text-xs pointer-events-none"></i>
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              setConfirmedItems(prev => prev.filter(i => i.id !== item.id));
+                            }}
+                            className="bg-red-50 border-2 border-red-300 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 w-9 h-9 rounded-full flex items-center justify-center shadow-md cursor-pointer hover:shadow-lg hover:scale-110 active:scale-95"
+                            title={language === 'ta' ? 'நீக்கு' : 'Delete this item'}
+                          >
+                            <i className="fas fa-trash-alt text-xs pointer-events-none"></i>
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
