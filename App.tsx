@@ -6,6 +6,7 @@ import { parseContinuousInput } from './services/voiceParser';
 import { generatePDFWithTamilSupport } from './services/pdfGeneratorV2';
 import VoiceControls from './components/VoiceControls';
 import CustomerForm from './components/CustomerForm';
+import PdfUpload from './components/PdfUpload';
 
 // Lightweight helper to get numeric quantity ("2 kg" -> 2, "" -> 1)
 const parseQuantityNumber = (quantity: string | null): number => {
@@ -113,6 +114,33 @@ const App: React.FC = () => {
   // Track which items have been auto-committed during this voice session
   const autoCommittedRef = useRef<Set<string>>(new Set());
 
+  // Helper to normalize item name for comparison (removes extra spaces, lowercases)
+  const normalizeItemName = (name: string): string => {
+    return name.toLowerCase().trim().replace(/\s+/g, ' ');
+  };
+
+  // Helper to check if an item is similar to already committed items
+  const isSimilarToCommitted = (name: string, quantity: string): boolean => {
+    const normalizedName = normalizeItemName(name);
+    
+    // Check against auto-committed keys
+    for (const key of autoCommittedRef.current) {
+      const [committedName, committedQty] = key.split('|||');
+      const normalizedCommittedName = normalizeItemName(committedName);
+      
+      // Check if names are similar (one contains the other or they're the same)
+      if (normalizedName === normalizedCommittedName ||
+          normalizedName.includes(normalizedCommittedName) ||
+          normalizedCommittedName.includes(normalizedName)) {
+        // If quantities are also similar, it's a duplicate
+        if (quantity === committedQty || !quantity || !committedQty) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   // Central helper to clear everything (usable by UI + voice commands)
   const clearAllItems = () => {
     setConfirmedItems([]);
@@ -153,7 +181,8 @@ const App: React.FC = () => {
     parsedDataList.forEach((p, idx) => {
       const rate = includePriceInVoice ? (p.rate || 0) : 0;
       const qtyNum = parseQuantityNumber(p.quantity);
-      const itemKey = `${p.name || ''}-${p.quantity || ''}-${rate}`;
+      // Use a more robust key with separator that won't appear in names
+      const itemKey = `${p.name || ''}|||${p.quantity || ''}|||${rate}`;
       
       const billItem: BillItem = {
         id: `live-${idx}`,
@@ -168,8 +197,11 @@ const App: React.FC = () => {
       // Rate can be added/edited later manually
       const isComplete = p.name && p.quantity;
       if (isComplete) {
-        // Check if we already auto-committed this item
-        if (!autoCommittedRef.current.has(itemKey)) {
+        // Check if we already auto-committed this item or a similar one
+        const alreadyCommitted = autoCommittedRef.current.has(itemKey) || 
+                                  isSimilarToCommitted(p.name || '', p.quantity || '');
+        
+        if (!alreadyCommitted) {
           completedItems.push(billItem);
           autoCommittedRef.current.add(itemKey);
         }
@@ -416,6 +448,16 @@ const App: React.FC = () => {
     setInlineEditValues({ name: '', quantity: '', rate: '' });
   };
 
+  // Handle items extracted from uploaded PDF
+  const handlePdfItemsExtracted = (extractedItems: BillItem[]) => {
+    // Add extracted items to confirmed items list
+    setConfirmedItems(prev => [...prev, ...extractedItems]);
+    
+    // Show edit interface for immediate editing
+    setEditingItems([...confirmedItems, ...extractedItems]);
+    setShowEditInterface(true);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-sky-50 to-white font-sans text-gray-800 pb-20">
       
@@ -479,6 +521,14 @@ const App: React.FC = () => {
               Add Samples
             </button>
           </div>
+        </div>
+        
+        {/* PDF Upload Section */}
+        <div className="mb-6">
+          <PdfUpload 
+            language={language} 
+            onItemsExtracted={handlePdfItemsExtracted}
+          />
         </div>
         
         {/* Paper Container */}
